@@ -1,3 +1,10 @@
+export interface SeatsLayout {
+    standing: number;
+    standard: number;
+    covered: number;
+    vip: number;
+}
+
 export class Stadium {
     standing: number;
     standard: number;
@@ -7,11 +14,11 @@ export class Stadium {
     static standardMultiplier = 2;
     static coveredMultiplier = 4;
     static vipMultiplier = 12;
-    constructor(standing: number, standard: number, covered: number, vip: number) {
-        this.standing = standing;
-        this.standard = standard;
-        this.covered = covered;
-        this.vip = vip;
+    constructor(layout: SeatsLayout) {
+        this.standing = layout.standing;
+        this.standard = layout.standard;
+        this.covered = layout.covered;
+        this.vip = layout.vip;
     }
     calcMaxIncome(baseTicket: number): number {
         return baseTicket * (
@@ -20,5 +27,16 @@ export class Stadium {
             (this.covered * Stadium.coveredMultiplier) +
             (this.vip * Stadium.vipMultiplier)
         );
+    }
+    getTotalSeats(): number {
+        return this.standing + this.standard + this.covered + this.vip;
+    }
+    getLayout(): SeatsLayout {
+        return {
+            standing: this.standing,
+            standard: this.standard,
+            covered: this.covered,
+            vip: this.vip
+        };
     }
 }

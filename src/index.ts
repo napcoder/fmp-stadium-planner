@@ -13,16 +13,16 @@ import { getTranslator } from './i18n';
         let stadium: Stadium;
         let maxIncome: number;
         if (stadiumData && stadiumData.stadium && stadiumData.stadium.stands) {
-            stadium = new Stadium(
-                stadiumData.stadium.stands.sta,
-                stadiumData.stadium.stands.std,
-                stadiumData.stadium.stands.cov,
-                stadiumData.stadium.stands.vip
-            );
+            stadium = new Stadium({
+                standing: stadiumData.stadium.stands.sta,
+                standard: stadiumData.stadium.stands.std,
+                covered: stadiumData.stadium.stands.cov,
+                vip: stadiumData.stadium.stands.vip
+            });
             maxIncome = stadium.calcMaxIncome(28);
         } else {
-            // fallback to hardcoded values
-            stadium = new Stadium(11040, 5520, 2760, 690);
+            // TODO: remove this fallback and show an error message to the user
+            stadium = new Stadium({ standing: 11040, standard: 5520, covered: 2760, vip: 690 });
             maxIncome = stadium.calcMaxIncome(28);
         }
 
