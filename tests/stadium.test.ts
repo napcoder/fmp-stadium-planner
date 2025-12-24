@@ -25,3 +25,17 @@ describe('Stadium', () => {
     expect(stadium.standing).toBe(5);
   });
 });
+
+describe('Stadium.isDifferentLayout', () => {
+  it('should detect different layouts', () => {
+    const a = new Stadium({ standing: 1, standard: 2, covered: 3, vip: 4 });
+    const b = new Stadium({ standing: 1, standard: 2, covered: 3, vip: 5 });
+    expect(a.isDifferentLayout(b)).toBe(true);
+    expect(b.isDifferentLayout(a)).toBe(true);
+  });
+  it('should detect identical layouts', () => {
+    const a = new Stadium({ standing: 10, standard: 20, covered: 30, vip: 40 });
+    const b = new Stadium({ standing: 10, standard: 20, covered: 30, vip: 40 });
+    expect(a.isDifferentLayout(b)).toBe(false);
+  });
+});

@@ -10,7 +10,16 @@ FMP Stadium Planner is a Tampermonkey userscript that helps planning stadium upg
 - **Bundler**: Rollup (see `rollup.config.mjs`). Output banner is injected from `userscript-metatags.js` at build time.
 - **Metadata header**: `userscript-metatags.js` (imported as a banner in Rollup)
 - **Output**: Single bundle ready for Tampermonkey in `dist/` (e.g., `dist/fmp-stadium-planner.user.js`)
-- **Core class**: `Stadium` - manages seat counts and multipliers. Uses `SeatsLayout` DTO for input.
+- **Core classes**:
+  - `Stadium`: manages seat counts and multipliers. Uses `SeatsLayout` DTO for input.
+  - `EnhancedStadium`: extends `Stadium` by adding a `baseTicketPrice` property and related helpers (e.g. `.clone()`, `.fromStadium()`, `.calcMaxIncome()` without arguments). Used for stateful operations and UI.
+  - `Store`: simple observable state container (see `src/store.ts`). Holds `currentStadium` and `plannedStadium` (both `EnhancedStadium`), notifies listeners on relevant changes. Used for UI reactivity.
+
+- **UI Views**: All UI is rendered via functions in `src/view/`:
+  - `planner-view.ts`: Main planner interface, renders seat table, input for total seats, and plan button. Subscribes to `Store` for reactivity.
+  - `info-view.ts`: Renders stadium info and income summary.
+  - `title.ts`: Utility for rendering section titles.
+  - All views are pure functions that take a container and a `Store` instance, and update the DOM accordingly.
 - **Entry point**: IIFE for userscript isolation (`src/index.ts` builds the UI and invokes planner logic when needed)
 
 ## Development Workflow
@@ -83,7 +92,8 @@ const planned = planner(2900, current);
 ```
 
 ### Constructor Pattern
-The Stadium constructor takes 4 positional arguments: `standing, standard, covered, vip`. No validation or default values—assumes valid positive integers.
+- The `Stadium` constructor takes a `SeatsLayout` object. No validation or default values—assumes valid positive integers.
+- The `EnhancedStadium` constructor takes a `SeatsLayout` and a `baseTicketPrice` (number). Use `.fromStadium()` to create from a `Stadium` and price.
 
 ## Best Practices & Publishing
 - Keep the IIFE wrapper for userscript isolation.
@@ -95,6 +105,7 @@ The Stadium constructor takes 4 positional arguments: `standing, standard, cover
 
 ## Code Style Guidelines
 - All code comments, variable names, and function names must always be written in English.
+- UI labels for user-facing fields should be in Italian (e.g. "posti totali" for the seat input in planner-view), unless otherwise specified by the product owner.
 
 ### Publishing (Greasyfork + GitHub)
 - Upload the bundle from `dist/` to a GitHub Release.
@@ -104,8 +115,8 @@ The Stadium constructor takes 4 positional arguments: `standing, standard, cover
 
 **Example metatag for combined distribution:**
 ```js
-// @updateURL   https://github.com/napcoder/fmp-stadium-planner/releases/latest/download/fmp-stadium-planner.user.js
-// @downloadURL https://github.com/napcoder/fmp-stadium-planner/releases/latest/download/fmp-stadium-planner.user.js
+// @updateURL   https://github.com/napcoder/fmp-stadium-planner/releases/latest/download/fmp-stadium-planner.js
+// @downloadURL https://github.com/napcoder/fmp-stadium-planner/releases/latest/download/fmp-stadium-planner.js
 ```
 
 ### README & Badge
@@ -113,8 +124,26 @@ The Stadium constructor takes 4 positional arguments: `standing, standard, cover
 - Document the pipeline and the automatic update mechanism.
 
 ## Change Log (AI edits)
+- 2025-12-24: Added documentation for Store, EnhancedStadium, and the view modules (planner-view, info-view, title). Noted the Italian label for seat input in planner-view.
 - 2025-12-23: AI refactored `planner` to use `SeatsLayout` DTO for ideals and additions; updated `distributeWithExtra` signature to accept `SeatsLayout` add object.
 - 2025-12-23: Reorganized and cleaned this guidelines file for clarity and removed duplicate sections.
+
+## Third-party UI libraries evaluation
+
+The target site already exposes a set of common frontend libraries. Because those libraries are loaded by the host page at runtime, our decision is only whether to *use* the page-provided globals — not whether to include them in the bundle.
+
+Short notes for each library (presence on-site assumed):
+- `jquery 3.7.1`: Useful for concise DOM selection and event handling. If the host page provides `window.jQuery` and you prefer jQuery-style code, it is safe to use the global rather than bundling your own copy.
+- `jquery-ui 1.13.2`: Useful for complex widgets (dialogs, sliders, draggables). Use it only if you need those widgets and the site exposes it.
+- `jquery perfect scrollbar 1.4.0`: Helps with custom scrollbars/scroll regions. Consider only when embedding a region that needs a custom scrollbar.
+- `twitter bootstrap 5.3.3`: Provides ready-made components and layout utilities. Using the host's Bootstrap can speed up styling, but be careful about CSS collisions with the page. Scope styles under `#fmp-stadium-planner` where possible.
+- `popper.js 2.9.2`: Useful only for complex popovers/tooltips. Use it when those interactions are required and the host provides it.
+- `text clipper 2.2.0`: For truncating text; only relevant for UI elements that need clipping.
+
+Recommendation:
+- Do not bundle these libraries. Instead, detect and reuse the host page's globals when available (e.g. `window.jQuery`, `window.bootstrap`), and fall back to native DOM APIs if not present.
+- When using host-provided libraries, document the runtime dependency in `README.md` and in the userscript metatags (if the dependency is required for correct behaviour).
+- Prefer minimal, scoped CSS for injected UI (`#fmp-stadium-planner`) to avoid visual conflicts when reusing host styles.
 
 ---
 

@@ -3,12 +3,12 @@ import { getTranslator } from '../src/i18n';
 describe('i18n getTranslator', () => {
   it('returns English by default', () => {
     const t = getTranslator('en');
-    expect(t('maxIncome')).toBe('Maximum income:');
+    expect(t('maxIncomeCurrent')).toBe('Maximum income (current)');
   });
 
   it('returns Italian if specified', () => {
     const t = getTranslator('it');
-    expect(t('maxIncome')).toBe('Massimo incasso:');
+    expect(t('maxIncomeCurrent')).toBe('Massimo incasso (attuale)');
   });
 
   it('returns key itself for unknown key', () => {
@@ -19,6 +19,6 @@ describe('i18n getTranslator', () => {
   it('falls back to English if language not supported', () => {
     // @ts-expect-error: purposely passing unsupported lang
     const t = getTranslator('fr');
-    expect(t('maxIncome')).toBe('Maximum income:');
+    expect(t('maxIncomeCurrent')).toBe('Maximum income (current)');
   });
 });

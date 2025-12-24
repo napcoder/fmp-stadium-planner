@@ -4,12 +4,14 @@ A Tampermonkey userscript that helps planning stadium upgrades on Football Manag
 
 ## Features
 - Shows maximum income for your stadium in league games
+- A work plan that, given the required number of seats, distributes them by sector, according to the 1-4-8-16 ratio for VIP, covered, standard, and standing sectors, showing also expected maximum income
 
 ### Planned features (WIP)
-- A work plan that, given the required number of seats, distributes them by sector, according to the 1-4-8-16 ratio for VIP, covered, standard, and standing sectors
-- A visualization of the expected maintenance costs, the expected cost and duration of works for a given work plan, broken down by sector and total, as well as the new expected maximum income
-- A visualization of the current and expected maximum income, both with and without season tickets, and with or without the new planned season tickets
-- A forecast of the future maximum income from the food and beverage sector with the new work plan
+- A visualization of the current and expected maximum income, both with and without season tickets
+- A visualization of the expected maintenance costs
+- A visualization of the current and expected maximum income with or without the new planned season tickets
+- A visualization of the expected cost and duration of works for a given work plan, broken down by sector and total, as well as the new expected maximum income
+- A forecast of the future maximum income from the food and beverage sector with the new work plan, compared with current one
 
 ## Usage
 1. Clone this repository.
@@ -50,6 +52,9 @@ A Tampermonkey userscript that helps planning stadium upgrades on Football Manag
 	2. Run `npm run bundle` to generate the latest script.
 	3. Upload the new bundle to a GitHub Release.
 	4. Optionally, update the Greasyfork listing to point to the raw GitHub file for automatic updates.
+
+## Bootstrap integration
+This userscript leverages Bootstrap 5 classes and layout utilities (as provided by the host site) for responsive UI and modern styling. No Bootstrap code is bundled; the script assumes Bootstrap 5.3+ is already loaded on the target page.
 
 ## License
 MIT

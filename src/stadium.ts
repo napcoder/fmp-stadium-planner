@@ -20,8 +20,8 @@ export class Stadium {
         this.covered = layout.covered;
         this.vip = layout.vip;
     }
-    calcMaxIncome(baseTicket: number): number {
-        return baseTicket * (
+    calcMaxIncome(baseTicketPrice: number): number {
+        return baseTicketPrice * (
             (this.standing * Stadium.standingMultiplier) +
             (this.standard * Stadium.standardMultiplier) +
             (this.covered * Stadium.coveredMultiplier) +
@@ -38,5 +38,28 @@ export class Stadium {
             covered: this.covered,
             vip: this.vip
         };
+    }
+    isDifferentLayout(other: Stadium): boolean {
+        return this.standing !== other.standing ||
+               this.standard !== other.standard ||
+               this.covered !== other.covered ||
+               this.vip !== other.vip;
+    }
+}
+
+export class EnhancedStadium extends Stadium {
+    baseTicketPrice: number;
+    constructor(layout: SeatsLayout, baseTicketPrice: number) {
+        super(layout);
+        this.baseTicketPrice = baseTicketPrice;
+    }
+    static fromStadium(stadium: Stadium, baseTicketPrice: number): EnhancedStadium {
+        return new EnhancedStadium(stadium.getLayout(), baseTicketPrice);
+    }
+    calcMaxIncome(): number {
+        return super.calcMaxIncome(this.baseTicketPrice);
+    }
+    clone(): EnhancedStadium {
+        return new EnhancedStadium(this.getLayout(), this.baseTicketPrice);
     }
 }
