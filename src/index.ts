@@ -1,4 +1,5 @@
-import { EnhancedStadium } from './stadium';
+import { UpgradeManager } from "./upgrade-manager";
+import { Stadium } from "./stadium";
 import { getStadiumData } from './stadium-api';
 import Store from './store';
 import { buildView } from './view/index';
@@ -8,29 +9,29 @@ import { buildView } from './view/index';
 
     async function run() {
         const stadiumData = await getStadiumData();
-        let stadium: EnhancedStadium;
-        let maxIncome: number;
+        let stadium: Stadium;
+        let baseTicketPrice: number;
         if (stadiumData && stadiumData.stadium && stadiumData.stadium.stands) {
-            stadium = new EnhancedStadium({
+            stadium = new Stadium({
                 standing: stadiumData.stadium.stands.sta,
                 standard: stadiumData.stadium.stands.std,
                 covered: stadiumData.stadium.stands.cov,
                 vip: stadiumData.stadium.stands.vip,
-            }, stadiumData.standingPlacePrice);
-            maxIncome = stadium.calcMaxIncome();
+            });
+            baseTicketPrice = stadiumData.standingPlacePrice;
         } else {
             // TODO: remove this fallback and show an error message to the user
-            stadium = new EnhancedStadium({ standing: 11040, standard: 5520, covered: 2760, vip: 690 }, 28);
-            maxIncome = stadium.calcMaxIncome();
+            stadium = new Stadium({ standing: 4000, standard: 2000, covered: 1000, vip: 0 });
+            baseTicketPrice = 28;
         }
 
-        // Initialize store with current stadium and max income
+        // Initialize store with current stadium
         const store = new Store({
             currentStadium: stadium,
             plannedStadium: stadium.clone(),
+            baseTicketPrice: baseTicketPrice,
         });
 
-        // Pass the current stadium and the base ticket price (28)
         buildView(store);
     }
 

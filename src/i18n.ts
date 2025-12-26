@@ -2,17 +2,21 @@ import { planner } from "./planner";
 
 const translations = {
     en: {
-        maxIncomeCurrent: "Maximum income (current)",
-        maxIncomePlanned: "Maximum income (planned)",
+        maxIncome: "Maximum income",
+        maintananceCost: "Maintanance cost",
         plan: "Plan",
         planner: "Planner",
+        planned: "planned",
+        current: "current",
         desiredTotalSeats: "Desired total seats",
     },
     it: {
-        maxIncomeCurrent: "Massimo incasso (attuale)",
-        maxIncomePlanned: "Massimo incasso (pianificato)",
+        maxIncome: "Massimo incasso",
+        maintananceCost: "Costo di manutenzione",
         plan: "Pianifica",
         planner: "Planner",
+        planned: "pianificato",
+        current: "attuale",
         desiredTotalSeats: "Posti totali desiderati",
     }
 };

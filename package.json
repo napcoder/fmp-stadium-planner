@@ -1,6 +1,6 @@
 {
   "name": "fmp-stadium-planner",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A Tampermonkey userscript for Football Manager Project (FMP) browser game to help in planning stadium building.",
   "author": "Marco Travaglini",
   "license": "MIT",
@@ -26,6 +26,8 @@
   "scripts": {
     "test": "jest",
     "test:verbose": "jest --verbose",
+    "test:watch": "jest --watch",
+    "test:watch:all": "jest --watchAll",
     "build": "tsc",
     "build:watch": "tsc --watch",
     "bundle": "tsc --project tsconfig.build.json && rollup -c rollup.config.mjs"

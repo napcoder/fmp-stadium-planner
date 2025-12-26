@@ -18,15 +18,19 @@ export function renderInfoView(container: HTMLElement, store: Store) {
         // Current stadium info
         const currentInfo = document.createElement('div');
         currentInfo.id = 'fmp-stadium-current-info';
-        const maxIncome = state.currentStadium.calcMaxIncome();
-        currentInfo.innerHTML = `<p>${t('maxIncomeCurrent')}: ${maxIncome.toLocaleString()}ⓕ</p>`;
+        const maxIncome = state.currentStadium.calcMaxIncome(state.baseTicketPrice);
+        const maintainanceCost = state.currentStadium.getMaintainCost();
+        currentInfo.innerHTML = `<p>${t('maxIncome')} (${t('current')}): ${maxIncome.toLocaleString()}ⓕ</p>`;
+        currentInfo.innerHTML += `<p>${t('maintananceCost')} (${t('current')}): ${maintainanceCost.toLocaleString()}ⓕ</p>`;
         content.appendChild(currentInfo);
         // Planned stadium info (if available)
         if (state.plannedStadium) {
             const plannedInfo = document.createElement('div');
             plannedInfo.id = 'fmp-stadium-planned-info';
-            const plannedMaxIncome = state.plannedStadium.calcMaxIncome();
-            plannedInfo.innerHTML = `<p>${t('maxIncomePlanned')}: ${plannedMaxIncome.toLocaleString()}ⓕ</p>`;
+            const plannedMaxIncome = state.plannedStadium.calcMaxIncome(state.baseTicketPrice);
+            const plannedMaintainanceCost = state.plannedStadium.getMaintainCost();
+            plannedInfo.innerHTML = `<p>${t('maxIncome')} (${t('planned')}): ${plannedMaxIncome.toLocaleString()}ⓕ</p>`;
+            plannedInfo.innerHTML += `<p>${t('maintananceCost')} (${t('planned')}): ${plannedMaintainanceCost.toLocaleString()}ⓕ</p>`;
             content.appendChild(plannedInfo);
         }
         container.appendChild(content);

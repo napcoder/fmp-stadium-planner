@@ -1,5 +1,6 @@
 import { getHostLabel as ht, getTranslator } from '../i18n';
-import { EnhancedStadium, SeatsLayout } from '../stadium';
+import { SeatsLayout } from '../stadium';
+import { UpgradeManager } from "../upgrade-manager";
 import { planner } from '../planner';
 import { makeTitleContainer } from './title';
 import Store, { State } from '../store';
@@ -79,9 +80,8 @@ export function renderPlannerView(container: HTMLElement, store: Store) {
                 input.value = MAX_SEATS.toString();
             }
             // Use store to update plannedStadium
-            const planned = planner(desired, state.currentStadium)
-            const plannedEnhanced = planned == null ? null : EnhancedStadium.fromStadium(planned, state.currentStadium.baseTicketPrice);
-            store.setState({ plannedStadium: plannedEnhanced });
+            const planned = planner(desired, state.currentStadium);
+            store.setState({ plannedStadium: planned });
         });
     });
 }

@@ -81,7 +81,7 @@ function distributeWithExtra(
     return new Stadium({ standing, standard, covered, vip });
 }
 
-export function planner(desiredTotal: number, currentStadium: Stadium): Stadium | null {
+export function planner(desiredTotal: number, currentStadium: Stadium): Stadium {
     const currentTotal = currentStadium.getTotalSeats();
     if (currentTotal >= desiredTotal) {
         return currentStadium; // No changes needed

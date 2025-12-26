@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FMP Stadium Planner
 // @namespace    https://github.com/napcoder/fmp-stadium-planner
-// @version      0.2.0
+// @version      0.3.0
 // @description  Plan, analyze and optimize your Football Manager Project (FMP) stadium!
 // @author       Marco Travaglini (Napcoder)
 // @match        https://footballmanagerproject.com/Economy/Stadium
@@ -22,10 +22,28 @@
         standard;
         covered;
         vip;
-        static standingMultiplier = 1;
-        static standardMultiplier = 2;
-        static coveredMultiplier = 4;
-        static vipMultiplier = 12;
+        static config = {
+            vip: {
+                ticketMultiplier: 12,
+                maintainCostFactor: 12,
+                buildTimeFactor: 40,
+            },
+            covered: {
+                ticketMultiplier: 4,
+                maintainCostFactor: 4,
+                buildTimeFactor: 20,
+            },
+            standard: {
+                ticketMultiplier: 2,
+                maintainCostFactor: 2,
+                buildTimeFactor: 10,
+            },
+            standing: {
+                ticketMultiplier: 1,
+                maintainCostFactor: 1,
+                buildTimeFactor: 5,
+            }
+        };
         constructor(layout) {
             this.standing = layout.standing;
             this.standard = layout.standard;
@@ -33,10 +51,10 @@
             this.vip = layout.vip;
         }
         calcMaxIncome(baseTicketPrice) {
-            return baseTicketPrice * ((this.standing * Stadium.standingMultiplier) +
-                (this.standard * Stadium.standardMultiplier) +
-                (this.covered * Stadium.coveredMultiplier) +
-                (this.vip * Stadium.vipMultiplier));
+            return baseTicketPrice * ((this.standing * Stadium.config.standing.ticketMultiplier) +
+                (this.standard * Stadium.config.standard.ticketMultiplier) +
+                (this.covered * Stadium.config.covered.ticketMultiplier) +
+                (this.vip * Stadium.config.vip.ticketMultiplier));
         }
         getTotalSeats() {
             return this.standing + this.standard + this.covered + this.vip;
@@ -54,6 +72,15 @@
                 this.standard !== other.standard ||
                 this.covered !== other.covered ||
                 this.vip !== other.vip;
+        }
+        calcMaintainCost(seats, maintainCostFactor) {
+            return Math.ceil(0.01 * Math.pow(seats * maintainCostFactor, 2.0) * 4.5 / 32400) * 100;
+        }
+        getMaintainCost() {
+            return this.calcMaintainCost(this.standing, Stadium.config.standing.maintainCostFactor) +
+                this.calcMaintainCost(this.standard, Stadium.config.standard.maintainCostFactor) +
+                this.calcMaintainCost(this.covered, Stadium.config.covered.maintainCostFactor) +
+                this.calcMaintainCost(this.vip, Stadium.config.vip.maintainCostFactor);
         }
     }
     class EnhancedStadium extends Stadium {
@@ -125,17 +152,21 @@
 
     const translations = {
         en: {
-            maxIncomeCurrent: "Maximum income (current)",
-            maxIncomePlanned: "Maximum income (planned)",
+            maxIncome: "Maximum income",
+            maintananceCost: "Maintanance cost",
             plan: "Plan",
             planner: "Planner",
+            planned: "planned",
+            current: "current",
             desiredTotalSeats: "Desired total seats",
         },
         it: {
-            maxIncomeCurrent: "Massimo incasso (attuale)",
-            maxIncomePlanned: "Massimo incasso (pianificato)",
+            maxIncome: "Massimo incasso",
+            maintananceCost: "Costo di manutenzione",
             plan: "Pianifica",
             planner: "Planner",
+            planned: "pianificato",
+            current: "attuale",
             desiredTotalSeats: "Posti totali desiderati",
         }
     };
@@ -219,14 +250,18 @@
             const currentInfo = document.createElement('div');
             currentInfo.id = 'fmp-stadium-current-info';
             const maxIncome = state.currentStadium.calcMaxIncome();
-            currentInfo.innerHTML = `<p>${t$1('maxIncomeCurrent')}: ${maxIncome.toLocaleString()}ⓕ</p>`;
+            const maintainanceCost = state.currentStadium.getMaintainCost();
+            currentInfo.innerHTML = `<p>${t$1('maxIncome')} (${t$1('current')}): ${maxIncome.toLocaleString()}ⓕ</p>`;
+            currentInfo.innerHTML += `<p>${t$1('maintananceCost')} (${t$1('current')}): ${maintainanceCost.toLocaleString()}ⓕ</p>`;
             content.appendChild(currentInfo);
             // Planned stadium info (if available)
             if (state.plannedStadium) {
                 const plannedInfo = document.createElement('div');
                 plannedInfo.id = 'fmp-stadium-planned-info';
                 const plannedMaxIncome = state.plannedStadium.calcMaxIncome();
-                plannedInfo.innerHTML = `<p>${t$1('maxIncomePlanned')}: ${plannedMaxIncome.toLocaleString()}ⓕ</p>`;
+                const plannedMaintainanceCost = state.plannedStadium.getMaintainCost();
+                plannedInfo.innerHTML = `<p>${t$1('maxIncome')} (${t$1('planned')}): ${plannedMaxIncome.toLocaleString()}ⓕ</p>`;
+                plannedInfo.innerHTML += `<p>${t$1('maintananceCost')} (${t$1('planned')}): ${plannedMaintainanceCost.toLocaleString()}ⓕ</p>`;
                 content.appendChild(plannedInfo);
             }
             container.appendChild(content);
