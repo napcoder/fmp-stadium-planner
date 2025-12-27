@@ -20,13 +20,16 @@ export class UpgradeManager {
     }
 
     private calcSectorBuildingCost(newseats: number, oldseats: number, maintainCostFactor: number): number {
-        if (newseats < oldseats)
+        if (newseats <= oldseats)
             return 0;
         return Math.ceil(0.15 * (Math.pow(newseats * maintainCostFactor, 2.0) 
             - Math.pow(oldseats * maintainCostFactor, 2.0)) * 4.5 / 32400) * 2500;
     }
 
     public TimeToBuild(newseats: number, oldseats: number, buildTimeFact: number): number {
+        if (newseats === oldseats) {
+            return 0;
+        }
         return Math.round((1.0 + buildTimeFact * Math.abs(newseats - oldseats)/1000.0));
     }
 
@@ -34,7 +37,7 @@ export class UpgradeManager {
         return this.calcSectorBuildingCost(
             this.plannedStadium.vip,
             this.currentStadium.vip,
-            Stadium.config.vip.buildTimeFactor
+            Stadium.config.vip.maintainCostFactor
         );
     }
 
@@ -42,7 +45,7 @@ export class UpgradeManager {
         return this.calcSectorBuildingCost(
             this.plannedStadium.covered,
             this.currentStadium.covered,
-            Stadium.config.covered.buildTimeFactor
+            Stadium.config.covered.maintainCostFactor
         );
     }
 
@@ -50,7 +53,7 @@ export class UpgradeManager {
         return this.calcSectorBuildingCost(
             this.plannedStadium.standard,
             this.currentStadium.standard,
-            Stadium.config.standard.buildTimeFactor
+            Stadium.config.standard.maintainCostFactor
         );
     }
 
@@ -58,7 +61,7 @@ export class UpgradeManager {
         return this.calcSectorBuildingCost(
             this.plannedStadium.standing,
             this.currentStadium.standing,
-            Stadium.config.standing.buildTimeFactor
+            Stadium.config.standing.maintainCostFactor
         );
     }
 

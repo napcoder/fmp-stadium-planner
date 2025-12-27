@@ -1,3 +1,5 @@
+import { SeasonTickets } from "./season-tickets";
+
 export interface SeatsLayout {
     standing: number;
     standard: number;
@@ -60,6 +62,15 @@ export class Stadium {
             (this.standard * Stadium.config.standard.ticketMultiplier) +
             (this.covered * Stadium.config.covered.ticketMultiplier) +
             (this.vip * Stadium.config.vip.ticketMultiplier)
+        );
+    }
+
+    calcMaxIncomeWithoutSeasonTickets(baseTicketPrice: number, seasonTickets: SeasonTickets): number {
+        return baseTicketPrice * (
+            ((this.standing - seasonTickets.standing) * Stadium.config.standing.ticketMultiplier) +
+            ((this.standard - seasonTickets.standard) * Stadium.config.standard.ticketMultiplier) +
+            ((this.covered - seasonTickets.covered) * Stadium.config.covered.ticketMultiplier) +
+            ((this.vip - seasonTickets.vip) * Stadium.config.vip.ticketMultiplier)
         );
     }
 

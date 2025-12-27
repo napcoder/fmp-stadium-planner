@@ -56,6 +56,12 @@
                 (this.covered * Stadium.config.covered.ticketMultiplier) +
                 (this.vip * Stadium.config.vip.ticketMultiplier));
         }
+        calcMaxIncomeWithoutSeasonTickets(baseTicketPrice, seasonTickets) {
+            return baseTicketPrice * (((this.standing - seasonTickets.standing) * Stadium.config.standing.ticketMultiplier) +
+                ((this.standard - seasonTickets.standard) * Stadium.config.standard.ticketMultiplier) +
+                ((this.covered - seasonTickets.covered) * Stadium.config.covered.ticketMultiplier) +
+                ((this.vip - seasonTickets.vip) * Stadium.config.vip.ticketMultiplier));
+        }
         getTotalSeats() {
             return this.standing + this.standard + this.covered + this.vip;
         }
@@ -82,21 +88,8 @@
                 this.calcMaintainCost(this.covered, Stadium.config.covered.maintainCostFactor) +
                 this.calcMaintainCost(this.vip, Stadium.config.vip.maintainCostFactor);
         }
-    }
-    class EnhancedStadium extends Stadium {
-        baseTicketPrice;
-        constructor(layout, baseTicketPrice) {
-            super(layout);
-            this.baseTicketPrice = baseTicketPrice;
-        }
-        static fromStadium(stadium, baseTicketPrice) {
-            return new EnhancedStadium(stadium.getLayout(), baseTicketPrice);
-        }
-        calcMaxIncome() {
-            return super.calcMaxIncome(this.baseTicketPrice);
-        }
         clone() {
-            return new EnhancedStadium(this.getLayout(), this.baseTicketPrice);
+            return new Stadium(this.getLayout());
         }
     }
 
@@ -142,7 +135,9 @@
         }
         isChanged(newState, prevState) {
             return (newState.currentStadium !== prevState.currentStadium && prevState.currentStadium.isDifferentLayout(newState.currentStadium)) ||
-                (newState.plannedStadium !== prevState.plannedStadium && (newState.plannedStadium === null || prevState.plannedStadium === null || prevState.plannedStadium.isDifferentLayout(newState.plannedStadium)));
+                (newState.plannedStadium !== prevState.plannedStadium && prevState.plannedStadium.isDifferentLayout(newState.plannedStadium)) ||
+                (newState.baseTicketPrice !== prevState.baseTicketPrice) ||
+                (prevState.seasonTickets.isDifferent(newState.seasonTickets));
         }
         notify(newState, prevState) {
             for (const l of this.listeners)
@@ -152,22 +147,52 @@
 
     const translations = {
         en: {
+            totalSeats: "Total seats",
+            currentInfoTitle: "Current information",
+            plannedInfoTitle: "Planned information",
+            detailedInfoTitle: "Detailed information",
+            constructionDetailsTitle: "Construction details per sector",
             maxIncome: "Maximum income",
+            maxIncomeWithoutSeasonTickets: "Maximum income (no seas. tkts)",
             maintananceCost: "Maintanance cost",
             plan: "Plan",
             planner: "Planner",
-            planned: "planned",
-            current: "current",
+            planned: "Planned",
+            current: "Current",
             desiredTotalSeats: "Desired total seats",
+            days: "days",
+            buildingCost: "Building cost",
+            timeToBuild: "Time to build",
+            delta: "Delta",
+            sizeDelta: "Size delta",
+            costsTableHeader: "Costs ⓕ",
+            timeTableHeader: "Time (days)",
+            sectorsTableHeader: "Sector",
+            total: "Total",
         },
         it: {
+            totalSeats: "Posti totali",
+            currentInfoTitle: "Informazioni attuali",
+            plannedInfoTitle: "Informazioni pianificate",
+            detailedInfoTitle: "Informazioni dettagliate",
+            constructionDetailsTitle: "Dettagli costruzione per settore",
             maxIncome: "Massimo incasso",
+            maxIncomeWithoutSeasonTickets: "Massimo incasso (meno quota abb.)",
             maintananceCost: "Costo di manutenzione",
             plan: "Pianifica",
             planner: "Planner",
-            planned: "pianificato",
-            current: "attuale",
+            planned: "Pianificato",
+            current: "Attuale",
             desiredTotalSeats: "Posti totali desiderati",
+            days: "giorni",
+            buildingCost: "Costo di costruzione",
+            timeToBuild: "Tempo di costruzione",
+            delta: "Delta",
+            sizeDelta: "Delta capienza",
+            costsTableHeader: "Costi (ⓕ)",
+            timeTableHeader: "Tempo (giorni)",
+            sectorsTableHeader: "Settore",
+            total: "Totale",
         }
     };
     function getUserLang() {
@@ -213,6 +238,68 @@
         return label;
     }
 
+    class UpgradeManager {
+        currentStadium;
+        plannedStadium;
+        baseTicketPrice;
+        constructor(currentLayout, baseTicketPrice, plannedLayout) {
+            this.currentStadium = new Stadium(currentLayout);
+            this.plannedStadium = new Stadium(plannedLayout || currentLayout);
+            this.baseTicketPrice = baseTicketPrice;
+        }
+        static fromStadium(currentStadium, baseTicketPrice) {
+            return new UpgradeManager(currentStadium.getLayout(), baseTicketPrice);
+        }
+        setPlannedLayout(layout) {
+            this.plannedStadium = new Stadium(layout);
+        }
+        calcSectorBuildingCost(newseats, oldseats, maintainCostFactor) {
+            if (newseats <= oldseats)
+                return 0;
+            return Math.ceil(0.15 * (Math.pow(newseats * maintainCostFactor, 2.0)
+                - Math.pow(oldseats * maintainCostFactor, 2.0)) * 4.5 / 32400) * 2500;
+        }
+        TimeToBuild(newseats, oldseats, buildTimeFact) {
+            if (newseats === oldseats) {
+                return 0;
+            }
+            return Math.round((1.0 + buildTimeFact * Math.abs(newseats - oldseats) / 1000.0));
+        }
+        getVipBuildingCost() {
+            return this.calcSectorBuildingCost(this.plannedStadium.vip, this.currentStadium.vip, Stadium.config.vip.maintainCostFactor);
+        }
+        getCoveredBuildingCost() {
+            return this.calcSectorBuildingCost(this.plannedStadium.covered, this.currentStadium.covered, Stadium.config.covered.maintainCostFactor);
+        }
+        getStandardBuildingCost() {
+            return this.calcSectorBuildingCost(this.plannedStadium.standard, this.currentStadium.standard, Stadium.config.standard.maintainCostFactor);
+        }
+        getStandingBuildingCost() {
+            return this.calcSectorBuildingCost(this.plannedStadium.standing, this.currentStadium.standing, Stadium.config.standing.maintainCostFactor);
+        }
+        getTotalBuildingCost() {
+            return this.getVipBuildingCost() +
+                this.getCoveredBuildingCost() +
+                this.getStandardBuildingCost() +
+                this.getStandingBuildingCost();
+        }
+        getVipTimeToBuild() {
+            return this.TimeToBuild(this.plannedStadium.vip, this.currentStadium.vip, Stadium.config.vip.buildTimeFactor);
+        }
+        getCoveredTimeToBuild() {
+            return this.TimeToBuild(this.plannedStadium.covered, this.currentStadium.covered, Stadium.config.covered.buildTimeFactor);
+        }
+        getStandardTimeToBuild() {
+            return this.TimeToBuild(this.plannedStadium.standard, this.currentStadium.standard, Stadium.config.standard.buildTimeFactor);
+        }
+        getStandingTimeToBuild() {
+            return this.TimeToBuild(this.plannedStadium.standing, this.currentStadium.standing, Stadium.config.standing.buildTimeFactor);
+        }
+        getTotalTimeToBuild() {
+            return Math.max(this.getVipTimeToBuild(), this.getCoveredTimeToBuild(), this.getStandardTimeToBuild(), this.getStandingTimeToBuild());
+        }
+    }
+
     function makeTitleContainer(mainTitle, subTitle, showBorder = true) {
         const title = document.createElement('div');
         title.className = 'title';
@@ -235,42 +322,72 @@
         return title;
     }
 
-    const t$1 = getTranslator();
-    // Renders info-view and subscribes to store updates
-    function renderInfoView(container, store) {
+    const t$2 = getTranslator();
+    // Renders general-info-view and subscribes to store updates
+    function renderGeneralInfoView(container, store) {
         // Clear container
         container.innerHTML = '';
         // Subscribe to store
         store.subscribe((state, prevState) => {
-            container.innerHTML = '';
-            const title = makeTitleContainer(null, getHostLabel('stadium.Information'));
-            container.appendChild(title);
-            const content = createItemContainer$1();
-            // Current stadium info
-            const currentInfo = document.createElement('div');
-            currentInfo.id = 'fmp-stadium-current-info';
-            const maxIncome = state.currentStadium.calcMaxIncome();
+            const totalSeats = state.currentStadium.getTotalSeats();
+            const maxIncome = state.currentStadium.calcMaxIncome(state.baseTicketPrice);
             const maintainanceCost = state.currentStadium.getMaintainCost();
-            currentInfo.innerHTML = `<p>${t$1('maxIncome')} (${t$1('current')}): ${maxIncome.toLocaleString()}ⓕ</p>`;
-            currentInfo.innerHTML += `<p>${t$1('maintananceCost')} (${t$1('current')}): ${maintainanceCost.toLocaleString()}ⓕ</p>`;
-            content.appendChild(currentInfo);
+            container.innerHTML = '';
+            const title = makeTitleContainer('FMP Stadium Planner', t$2('currentInfoTitle'));
+            container.appendChild(title);
+            const content = createItemContainer$2();
+            const totalSeatsRow = createRow$1(t$2('totalSeats'), totalSeats.toLocaleString());
+            const maintainanceCostRow = createRow$1(t$2('maintananceCost'), `ⓕ ${maintainanceCost.toLocaleString()}`);
+            const maxIncomeRow = createRow$1(t$2('maxIncome'), `ⓕ ${maxIncome.toLocaleString()}`);
+            content.appendChild(totalSeatsRow);
+            content.appendChild(maintainanceCostRow);
+            content.appendChild(maxIncomeRow);
+            container.appendChild(content);
             // Planned stadium info (if available)
             if (state.plannedStadium) {
-                const plannedInfo = document.createElement('div');
-                plannedInfo.id = 'fmp-stadium-planned-info';
-                const plannedMaxIncome = state.plannedStadium.calcMaxIncome();
+                const upgradeManager = new UpgradeManager(state.currentStadium.getLayout(), state.baseTicketPrice, state.plannedStadium.getLayout());
+                const plannedMaxIncome = state.plannedStadium.calcMaxIncome(state.baseTicketPrice);
                 const plannedMaintainanceCost = state.plannedStadium.getMaintainCost();
-                plannedInfo.innerHTML = `<p>${t$1('maxIncome')} (${t$1('planned')}): ${plannedMaxIncome.toLocaleString()}ⓕ</p>`;
-                plannedInfo.innerHTML += `<p>${t$1('maintananceCost')} (${t$1('planned')}): ${plannedMaintainanceCost.toLocaleString()}ⓕ</p>`;
-                content.appendChild(plannedInfo);
+                const plannedTotalSeats = state.plannedStadium.getTotalSeats();
+                const plannedBuildingCost = upgradeManager.getTotalBuildingCost();
+                const plannedTimeToBuild = upgradeManager.getTotalTimeToBuild();
+                const plannedTitle = makeTitleContainer(null, t$2('plannedInfoTitle'));
+                container.appendChild(plannedTitle);
+                const plannedContent = createItemContainer$2();
+                const plannedTotalSeatsRow = createRow$1(t$2('totalSeats'), plannedTotalSeats.toLocaleString());
+                const plannedMaintainanceCostRow = createRow$1(t$2('maintananceCost'), `ⓕ ${plannedMaintainanceCost.toLocaleString()}`);
+                const plannedMaxIncomeRow = createRow$1(t$2('maxIncome'), `ⓕ ${plannedMaxIncome.toLocaleString()}`);
+                const plannedBuildingCostRow = createRow$1(t$2('buildingCost'), `ⓕ ${plannedBuildingCost.toLocaleString()}`);
+                const plannedTimeToBuildRow = createRow$1(t$2('timeToBuild'), `${plannedTimeToBuild} ${t$2('days')}`);
+                plannedContent.appendChild(plannedTotalSeatsRow);
+                plannedContent.appendChild(plannedMaintainanceCostRow);
+                plannedContent.appendChild(plannedMaxIncomeRow);
+                plannedContent.appendChild(plannedBuildingCostRow);
+                plannedContent.appendChild(plannedTimeToBuildRow);
+                container.appendChild(plannedContent);
             }
-            container.appendChild(content);
         });
     }
-    function createItemContainer$1() {
+    function createItemContainer$2() {
         const item = document.createElement('div');
         item.className = 'item economy';
+        item.style.padding = '0 8px 0 24px';
         return item;
+    }
+    function createRow$1(captionText, value) {
+        const row = document.createElement('div');
+        row.className = 'row g-0';
+        row.style.padding = '4px 0 4px 0';
+        row.style.borderBottom = '1px solid #103201';
+        const col1 = document.createElement('div');
+        col1.className = 'col-6';
+        col1.textContent = captionText;
+        const col2 = document.createElement('div');
+        col2.className = 'col-6 text-end';
+        col2.textContent = value;
+        row.appendChild(col1);
+        row.appendChild(col2);
+        return row;
     }
 
     /**
@@ -386,16 +503,18 @@
         }
     }
 
-    const t = getTranslator();
+    const VERSION = "0.3.0";
     const MAX_SEATS = 1000000;
+
+    const t$1 = getTranslator();
     // Renders planner-view and subscribes to store updates
     function renderPlannerView(container, store) {
         container.innerHTML = '';
         store.subscribe((state, prevState) => {
             container.innerHTML = '';
-            const title = makeTitleContainer(null, t('planner'));
+            const title = makeTitleContainer('FMP Stadium Planner', t$1('planner'));
             container.appendChild(title);
-            const itemContainer = createItemContainer();
+            const itemContainer = createItemContainer$1();
             container.appendChild(itemContainer);
             const table = createTable(state.plannedStadium?.getLayout() || state.currentStadium.getLayout());
             itemContainer.appendChild(table);
@@ -412,7 +531,7 @@
             formGroup.style.marginRight = '8px';
             const label = document.createElement('label');
             label.htmlFor = 'desiredTotalInput';
-            label.textContent = t('desiredTotalSeats');
+            label.textContent = t$1('desiredTotalSeats');
             label.className = 'form-label';
             const input = document.createElement('input');
             input.type = 'number';
@@ -429,7 +548,7 @@
             const btn = document.createElement('button');
             btn.id = 'planBtn';
             btn.className = 'fmp-btn btn-green btn ms-2';
-            btn.textContent = t('plan');
+            btn.textContent = t$1('plan');
             // Flex row: formGroup (label+input) + button
             const flexRow = document.createElement('div');
             flexRow.className = 'd-flex align-items-end';
@@ -450,12 +569,11 @@
                 }
                 // Use store to update plannedStadium
                 const planned = planner(desired, state.currentStadium);
-                const plannedEnhanced = planned == null ? null : EnhancedStadium.fromStadium(planned, state.currentStadium.baseTicketPrice);
-                store.setState({ plannedStadium: plannedEnhanced });
+                store.setState({ plannedStadium: planned });
             });
         });
     }
-    function createItemContainer() {
+    function createItemContainer$1() {
         const item = document.createElement('div');
         item.className = 'item economy';
         return item;
@@ -498,69 +616,313 @@
         return table;
     }
 
+    const t = getTranslator();
+    function renderDetailedInfoView(container, store) {
+        // Clear container
+        container.innerHTML = '';
+        // Subscribe to store
+        store.subscribe((state, prevState) => {
+            container.innerHTML = '';
+            const infoTitle = makeTitleContainer('FMP Stadium Planner', t('detailedInfoTitle'), false);
+            container.appendChild(infoTitle);
+            const content = createItemContainer();
+            const upgradeManager = new UpgradeManager(state.currentStadium.getLayout(), state.baseTicketPrice, state.plannedStadium.getLayout());
+            const table = createMainTable(state, upgradeManager);
+            content.appendChild(table);
+            container.appendChild(content);
+        });
+    }
+    function createHeaders(captions, addPadding = false) {
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        captions.forEach((caption, index) => {
+            // all but first are right-aligned
+            const th = document.createElement('th');
+            th.textContent = caption;
+            if (index > 0) {
+                th.style.textAlign = 'right';
+            }
+            th.style.borderColor = '#a2dc7d';
+            if (addPadding) {
+                th.style.paddingTop = '24px';
+            }
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        return thead;
+    }
+    function createRow(cells) {
+        const row = document.createElement('tr');
+        cells.forEach((cellText, index) => {
+            // all but first are right-aligned
+            const cell = document.createElement('td');
+            cell.textContent = cellText;
+            if (index > 0) {
+                cell.style.textAlign = 'right';
+            }
+            cell.style.borderColor = '#103201';
+            row.appendChild(cell);
+        });
+        return row;
+    }
+    function createMainTable(state, upgradeManager) {
+        // container responsive div
+        const containerDiv = document.createElement('div');
+        containerDiv.className = 'table-responsive';
+        // create table
+        const table = document.createElement('table');
+        table.className = 'table table-hover';
+        table.style.minWidth = '600px'; // ensure table is wide enough, important for responsiveness
+        appendInfoTableSection(table, state);
+        appendSectorsTableSection(table, state, upgradeManager);
+        containerDiv.appendChild(table);
+        return containerDiv;
+    }
+    function appendInfoTableSection(table, state) {
+        // header
+        const tableHead = createHeaders(["", t('current'), t('planned'), t('delta')]);
+        table.appendChild(tableHead);
+        // body
+        const tableBody = document.createElement('tbody');
+        // tableBody.className = 'table-group-divider';
+        const totalSeatsRow = createRow([
+            t('totalSeats'),
+            state.currentStadium.getTotalSeats().toLocaleString(),
+            state.plannedStadium.getTotalSeats().toLocaleString(),
+            (state.plannedStadium.getTotalSeats() - state.currentStadium.getTotalSeats()).toLocaleString()
+        ]);
+        tableBody.appendChild(totalSeatsRow);
+        const vipSeatsRow = createRow([
+            getHostLabel('stadium.VIP Seats'),
+            state.currentStadium.getLayout().vip.toLocaleString(),
+            state.plannedStadium.getLayout().vip.toLocaleString(),
+            (state.plannedStadium.getLayout().vip - state.currentStadium.getLayout().vip).toLocaleString()
+        ]);
+        tableBody.appendChild(vipSeatsRow);
+        const coveredSeatsRow = createRow([
+            getHostLabel('stadium.Covered Seats'),
+            state.currentStadium.getLayout().covered.toLocaleString(),
+            state.plannedStadium.getLayout().covered.toLocaleString(),
+            (state.plannedStadium.getLayout().covered - state.currentStadium.getLayout().covered).toLocaleString()
+        ]);
+        tableBody.appendChild(coveredSeatsRow);
+        const standardSeatsRow = createRow([
+            getHostLabel('stadium.Other Seats'),
+            state.currentStadium.getLayout().standard.toLocaleString(),
+            state.plannedStadium.getLayout().standard.toLocaleString(),
+            (state.plannedStadium.getLayout().standard - state.currentStadium.getLayout().standard).toLocaleString()
+        ]);
+        tableBody.appendChild(standardSeatsRow);
+        const standingSeatsRow = createRow([
+            getHostLabel('stadium.Standing'),
+            state.currentStadium.getLayout().standing.toLocaleString(),
+            state.plannedStadium.getLayout().standing.toLocaleString(),
+            (state.plannedStadium.getLayout().standing - state.currentStadium.getLayout().standing).toLocaleString()
+        ]);
+        tableBody.appendChild(standingSeatsRow);
+        const maintainingCostRow = createRow([
+            t('maintananceCost'),
+            `ⓕ ${state.currentStadium.getMaintainCost().toLocaleString()}`,
+            `ⓕ ${state.plannedStadium.getMaintainCost().toLocaleString()}`,
+            `ⓕ ${(state.plannedStadium.getMaintainCost() - state.currentStadium.getMaintainCost()).toLocaleString()}`
+        ]);
+        tableBody.appendChild(maintainingCostRow);
+        const maxIncomeRow = createRow([
+            t('maxIncome'),
+            `ⓕ ${state.currentStadium.calcMaxIncome(state.baseTicketPrice).toLocaleString()}`,
+            `ⓕ ${state.plannedStadium.calcMaxIncome(state.baseTicketPrice).toLocaleString()}`,
+            `ⓕ ${(state.plannedStadium.calcMaxIncome(state.baseTicketPrice) - state.currentStadium.calcMaxIncome(state.baseTicketPrice)).toLocaleString()}`
+        ]);
+        tableBody.appendChild(maxIncomeRow);
+        const maxIncomeWithoutSeasonTicketsRow = createRow([
+            t('maxIncomeWithoutSeasonTickets'),
+            `ⓕ ${state.currentStadium.calcMaxIncomeWithoutSeasonTickets(state.baseTicketPrice, state.seasonTickets).toLocaleString()}`,
+            `ⓕ ${state.plannedStadium.calcMaxIncomeWithoutSeasonTickets(state.baseTicketPrice, state.seasonTickets).toLocaleString()}`,
+            `ⓕ ${(state.plannedStadium.calcMaxIncomeWithoutSeasonTickets(state.baseTicketPrice, state.seasonTickets) - state.currentStadium.calcMaxIncomeWithoutSeasonTickets(state.baseTicketPrice, state.seasonTickets)).toLocaleString()}`
+        ]);
+        tableBody.appendChild(maxIncomeWithoutSeasonTicketsRow);
+        table.appendChild(tableBody);
+    }
+    function appendSectorsTableSection(table, state, upgradeManager) {
+        const vipCost = upgradeManager.getVipBuildingCost();
+        const coveredCost = upgradeManager.getCoveredBuildingCost();
+        const standardCost = upgradeManager.getStandardBuildingCost();
+        const standingCost = upgradeManager.getStandingBuildingCost();
+        const totalCost = upgradeManager.getTotalBuildingCost();
+        const vipTime = upgradeManager.getVipTimeToBuild();
+        const coveredTime = upgradeManager.getCoveredTimeToBuild();
+        const standardTime = upgradeManager.getStandardTimeToBuild();
+        const standingTime = upgradeManager.getStandingTimeToBuild();
+        const totalTime = upgradeManager.getTotalTimeToBuild();
+        // header
+        const thead = createHeaders([t('constructionDetailsTitle'), t('sizeDelta'), t('costsTableHeader'), t('timeTableHeader')], true);
+        table.appendChild(thead);
+        // body
+        const tableBody = document.createElement('tbody');
+        // tableBody.className = 'table-group-divider';
+        table.appendChild(tableBody);
+        const vipSeatsRow = createRow([
+            getHostLabel('stadium.VIP Seats'),
+            (state.plannedStadium.getLayout().vip - state.currentStadium.getLayout().vip).toLocaleString(),
+            vipCost.toLocaleString(),
+            `${vipTime}`,
+        ]);
+        tableBody.appendChild(vipSeatsRow);
+        const coveredSeatsRow = createRow([
+            getHostLabel('stadium.Covered Seats'),
+            (state.plannedStadium.getLayout().covered - state.currentStadium.getLayout().covered).toLocaleString(),
+            coveredCost.toLocaleString(),
+            `${coveredTime}`,
+        ]);
+        tableBody.appendChild(coveredSeatsRow);
+        const standardSeatsRow = createRow([
+            getHostLabel('stadium.Other Seats'),
+            (state.plannedStadium.getLayout().standard - state.currentStadium.getLayout().standard).toLocaleString(),
+            standardCost.toLocaleString(),
+            `${standardTime}`,
+        ]);
+        tableBody.appendChild(standardSeatsRow);
+        const standingSeatsRow = createRow([
+            getHostLabel('stadium.Standing'),
+            (state.plannedStadium.getLayout().standing - state.currentStadium.getLayout().standing).toLocaleString(),
+            standingCost.toLocaleString(),
+            `${standingTime}`,
+        ]);
+        tableBody.appendChild(standingSeatsRow);
+        const totalRow = createRow([
+            t('total'),
+            (state.plannedStadium.getTotalSeats() - state.currentStadium.getTotalSeats()).toLocaleString(),
+            totalCost.toLocaleString(),
+            `${totalTime}`,
+        ]);
+        tableBody.appendChild(totalRow);
+    }
+    function createItemContainer() {
+        const item = document.createElement('div');
+        item.className = 'item economy';
+        return item;
+    }
+
     getTranslator();
     function buildView(store) {
         const injectionPoint = findInjectionPoint();
-        if (!injectionPoint)
+        if (!injectionPoint) {
+            console.error('FMP Stadium Planner: Unable to find injection point in DOM.');
             return;
+        }
+        // Add styles for responsive tables
+        const style = document.createElement('style');
+        style.textContent = `
+        .d-flex, .flexbox, .economy {
+            min-width: 0 !important;
+        }
+    `;
+        document.head.appendChild(style);
+        const mainHeader = makeMainHeader(VERSION);
         const mainContainer = makeMainContainer();
-        // Flex row for info and planner views
-        const flexRow = document.createElement('div');
-        flexRow.className = 'row g-3';
-        // Info view
-        const infoDiv = document.createElement('div');
-        infoDiv.className = 'col-12 col-md-6';
-        renderInfoView(infoDiv, store);
-        flexRow.appendChild(infoDiv);
+        injectionPoint.after(mainHeader);
+        mainHeader.after(mainContainer);
         // Planner view
-        const plannerDiv = document.createElement('div');
-        plannerDiv.className = 'col-12 col-md-6';
-        renderPlannerView(plannerDiv, store);
-        flexRow.appendChild(plannerDiv);
-        mainContainer.appendChild(flexRow);
-        injectionPoint.appendChild(mainContainer);
+        const plannerSection = makeSectionContainer();
+        renderPlannerView(plannerSection, store);
+        mainContainer.appendChild(plannerSection);
+        // General info view
+        const generalInfoSection = makeSectionContainer();
+        renderGeneralInfoView(generalInfoSection, store);
+        mainContainer.appendChild(generalInfoSection);
+        // Detailed info view
+        const detailedInfoSection = makeSectionContainer();
+        detailedInfoSection.style.flexBasis = '100%';
+        renderDetailedInfoView(detailedInfoSection, store);
+        mainContainer.appendChild(detailedInfoSection);
     }
     function findInjectionPoint() {
         // Find the first element with all three classes: d-flex flex-row flex-wrap
         const candidates = document.querySelectorAll('div.d-flex.flex-row.flex-wrap');
         return candidates.length > 0 ? candidates[0] : null;
     }
-    function makeMainContainer() {
+    function makeSectionContainer() {
         const container = document.createElement('div');
-        container.id = 'fmp-stadium-planner';
         container.className = 'fmpx board flexbox box';
         container.style.flexGrow = '1';
         container.style.flexBasis = '400px';
-        // container.style.margin = '24px 0';
-        const title = makeTitleContainer("FMP Stadium Planner", null, false);
-        container.appendChild(title);
         return container;
+    }
+    function makeMainContainer() {
+        const container = document.createElement('div');
+        container.id = 'fmp-stadium-planner-main';
+        container.className = 'd-flex flex-row flex-wrap';
+        return container;
+    }
+    function makeMainHeader(version) {
+        const mainContainer = document.createElement('div');
+        mainContainer.id = 'fmp-stadium-planner-header';
+        mainContainer.className = 'd-flex';
+        mainContainer.style.marginTop = '12px';
+        const panelHeader = document.createElement('div');
+        panelHeader.className = 'panel header flex-grow-1';
+        const header = document.createElement('div');
+        header.className = 'lheader';
+        const title = document.createElement('h3');
+        title.textContent = 'FMP Stadium Planner';
+        const versionSubtitle = document.createElement('h6');
+        versionSubtitle.textContent = `v${version}`;
+        header.appendChild(title);
+        header.appendChild(versionSubtitle);
+        panelHeader.appendChild(header);
+        mainContainer.appendChild(panelHeader);
+        return mainContainer;
+    }
+
+    class SeasonTickets {
+        standing;
+        standard;
+        covered;
+        vip;
+        tot;
+        constructor(standing, standard, covered, vip, total) {
+            this.standing = standing;
+            this.standard = standard;
+            this.covered = covered;
+            this.vip = vip;
+            this.tot = total;
+        }
+        isDifferent(other) {
+            return this.standing !== other.standing ||
+                this.standard !== other.standard ||
+                this.covered !== other.covered ||
+                this.vip !== other.vip ||
+                this.tot !== other.tot;
+        }
     }
 
     (function () {
         async function run() {
             const stadiumData = await getStadiumData();
             let stadium;
+            let baseTicketPrice;
+            let seasonTickets;
             if (stadiumData && stadiumData.stadium && stadiumData.stadium.stands) {
-                stadium = new EnhancedStadium({
+                stadium = new Stadium({
                     standing: stadiumData.stadium.stands.sta,
                     standard: stadiumData.stadium.stands.std,
                     covered: stadiumData.stadium.stands.cov,
                     vip: stadiumData.stadium.stands.vip,
-                }, stadiumData.standingPlacePrice);
-                stadium.calcMaxIncome();
+                });
+                baseTicketPrice = stadiumData.standingPlacePrice;
+                seasonTickets = new SeasonTickets(stadiumData.stadium.seasTkts.sta, stadiumData.stadium.seasTkts.std, stadiumData.stadium.seasTkts.cov, stadiumData.stadium.seasTkts.vip, stadiumData.stadium.seasTkts.tot);
             }
             else {
-                // TODO: remove this fallback and show an error message to the user
-                stadium = new EnhancedStadium({ standing: 11040, standard: 5520, covered: 2760, vip: 690 }, 28);
-                stadium.calcMaxIncome();
+                console.error('FMP Stadium Planner: Unable to retrieve stadium data from page.');
+                return;
             }
-            // Initialize store with current stadium and max income
+            // Initialize store with current stadium
             const store = new Store({
                 currentStadium: stadium,
                 plannedStadium: stadium.clone(),
+                baseTicketPrice: baseTicketPrice,
+                seasonTickets: seasonTickets,
             });
-            // Pass the current stadium and the base ticket price (28)
             buildView(store);
         }
         if (window.location.pathname.endsWith('Economy/Stadium')) {

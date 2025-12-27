@@ -4,24 +4,21 @@ import { UpgradeManager } from "../upgrade-manager";
 import { planner } from '../planner';
 import { makeTitleContainer } from './title';
 import Store, { State } from '../store';
+import { MAX_SEATS } from '../settings';
 
 const t = getTranslator();
-const MAX_SEATS = 1000000;
-
 
 // Renders planner-view and subscribes to store updates
 export function renderPlannerView(container: HTMLElement, store: Store) {
     container.innerHTML = '';
     store.subscribe((state: State, prevState: State) => {
         container.innerHTML = '';
-        const title = makeTitleContainer(null, t('planner'));
+        const title = makeTitleContainer('FMP Stadium Planner', t('planner'));
         container.appendChild(title);
         const itemContainer = createItemContainer();
         container.appendChild(itemContainer);
         const table = createTable(state.plannedStadium?.getLayout() || state.currentStadium.getLayout());
         itemContainer.appendChild(table);
-
-
 
         // Bootstrap layout: label above input, button right
         const controls = document.createElement('div');

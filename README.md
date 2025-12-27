@@ -5,13 +5,15 @@ A Tampermonkey userscript that helps planning stadium upgrades on Football Manag
 ## Features
 - Shows maximum income for your stadium in league games
 - A work plan that, given the required number of seats, distributes them by sector, according to the 1-4-8-16 ratio for VIP, covered, standard, and standing sectors, showing also expected maximum income
-
-### Planned features (WIP)
 - A visualization of the current and expected maximum income, both with and without season tickets
 - A visualization of the expected maintenance costs
-- A visualization of the current and expected maximum income with or without the new planned season tickets
 - A visualization of the expected cost and duration of works for a given work plan, broken down by sector and total, as well as the new expected maximum income
-- A forecast of the future maximum income from the food and beverage sector with the new work plan, compared with current one
+
+### Planned features (WIP)
+- Customizable ratio for planning
+- Advanced planning, let you choose the exact amount of seats for each sector
+- (optional) A visualization of the current and expected maximum income with or without the new planned season tickets
+- (optional) A forecast of the future maximum income from the food and beverage sector with the new work plan, compared with current one
 
 ## Usage
 1. Clone this repository.

@@ -1,37 +1,50 @@
 import { getHostLabel as ht, getTranslator } from '../i18n';
-import { planner } from '../planner';
-import { Stadium } from '../stadium';
 import Store from '../store';
-import { renderInfoView } from './info-view';
+import { renderGeneralInfoView } from './general-info-view';
+// import { renderInfoView } from './info-view';
 import { renderPlannerView } from './planner-view';
-import { makeTitleContainer } from './title';
+import { VERSION } from '../settings';
+import { renderDetailedInfoView } from './detailed-info-view';
 
 const t = getTranslator();
 
 export function buildView(store: Store) {
     const injectionPoint = findInjectionPoint();
-    if (!injectionPoint) return;
+    if (!injectionPoint) {
+        console.error('FMP Stadium Planner: Unable to find injection point in DOM.');
+        return;
+    }
 
+    // Add styles for responsive tables
+    const style = document.createElement('style');
+    style.textContent = `
+        .d-flex, .flexbox, .economy {
+            min-width: 0 !important;
+        }
+    `;
+    document.head.appendChild(style);
+
+    const mainHeader = makeMainHeader(VERSION);
     const mainContainer = makeMainContainer();
 
-    // Flex row for info and planner views
-    const flexRow = document.createElement('div');
-    flexRow.className = 'row g-3';
-
-    // Info view
-    const infoDiv = document.createElement('div');
-    infoDiv.className = 'col-12 col-md-6';
-    renderInfoView(infoDiv, store);
-    flexRow.appendChild(infoDiv);
+    injectionPoint.after(mainHeader);
+    mainHeader.after(mainContainer);
 
     // Planner view
-    const plannerDiv = document.createElement('div');
-    plannerDiv.className = 'col-12 col-md-6';
-    renderPlannerView(plannerDiv, store);
-    flexRow.appendChild(plannerDiv);
+    const plannerSection = makeSectionContainer();
+    renderPlannerView(plannerSection, store);
+    mainContainer.appendChild(plannerSection);
 
-    mainContainer.appendChild(flexRow);
-    injectionPoint.appendChild(mainContainer);
+    // General info view
+    const generalInfoSection = makeSectionContainer();
+    renderGeneralInfoView(generalInfoSection, store);
+    mainContainer.appendChild(generalInfoSection);
+
+    // Detailed info view
+    const detailedInfoSection = makeSectionContainer();
+    detailedInfoSection.style.flexBasis = '100%';
+    renderDetailedInfoView(detailedInfoSection, store);
+    mainContainer.appendChild(detailedInfoSection);
 }
 
 
@@ -41,14 +54,37 @@ function findInjectionPoint(): HTMLElement | null {
     return candidates.length > 0 ? (candidates[0] as HTMLElement) : null;
 }
 
-function makeMainContainer(): HTMLElement {
+function makeSectionContainer(): HTMLElement {
     const container = document.createElement('div');
-    container.id = 'fmp-stadium-planner';
     container.className = 'fmpx board flexbox box';
     container.style.flexGrow = '1';
     container.style.flexBasis = '400px';
-    // container.style.margin = '24px 0';
-    const title = makeTitleContainer("FMP Stadium Planner", null, false);
-    container.appendChild(title);
     return container;
+}
+
+function makeMainContainer() {
+    const container = document.createElement('div');
+    container.id = 'fmp-stadium-planner-main';
+    container.className = 'd-flex flex-row flex-wrap';
+    return container;
+}
+
+function makeMainHeader(version: string): HTMLElement {
+    const mainContainer = document.createElement('div');
+    mainContainer.id = 'fmp-stadium-planner-header';
+    mainContainer.className = 'd-flex';
+    mainContainer.style.marginTop = '12px';
+    const panelHeader = document.createElement('div');
+    panelHeader.className = 'panel header flex-grow-1';
+    const header = document.createElement('div');
+    header.className = 'lheader';
+    const title = document.createElement('h3');
+    title.textContent = 'FMP Stadium Planner';
+    const versionSubtitle = document.createElement('h6');
+    versionSubtitle.textContent = `v${version}`;
+    header.appendChild(title);
+    header.appendChild(versionSubtitle);
+    panelHeader.appendChild(header);
+    mainContainer.appendChild(panelHeader);
+    return mainContainer;
 }

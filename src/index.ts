@@ -1,8 +1,8 @@
-import { UpgradeManager } from "./upgrade-manager";
 import { Stadium } from "./stadium";
 import { getStadiumData } from './stadium-api';
 import Store from './store';
 import { buildView } from './view/index';
+import { SeasonTickets } from './season-tickets';
 
 (function() {
     'use strict';
@@ -11,6 +11,7 @@ import { buildView } from './view/index';
         const stadiumData = await getStadiumData();
         let stadium: Stadium;
         let baseTicketPrice: number;
+        let seasonTickets: SeasonTickets
         if (stadiumData && stadiumData.stadium && stadiumData.stadium.stands) {
             stadium = new Stadium({
                 standing: stadiumData.stadium.stands.sta,
@@ -19,10 +20,16 @@ import { buildView } from './view/index';
                 vip: stadiumData.stadium.stands.vip,
             });
             baseTicketPrice = stadiumData.standingPlacePrice;
+            seasonTickets = new SeasonTickets(
+                stadiumData.stadium.seasTkts.sta,
+                stadiumData.stadium.seasTkts.std,
+                stadiumData.stadium.seasTkts.cov,
+                stadiumData.stadium.seasTkts.vip,
+                stadiumData.stadium.seasTkts.tot,
+            );
         } else {
-            // TODO: remove this fallback and show an error message to the user
-            stadium = new Stadium({ standing: 4000, standard: 2000, covered: 1000, vip: 0 });
-            baseTicketPrice = 28;
+            console.error('FMP Stadium Planner: Unable to retrieve stadium data from page.');
+            return;
         }
 
         // Initialize store with current stadium
@@ -30,6 +37,7 @@ import { buildView } from './view/index';
             currentStadium: stadium,
             plannedStadium: stadium.clone(),
             baseTicketPrice: baseTicketPrice,
+            seasonTickets: seasonTickets,
         });
 
         buildView(store);

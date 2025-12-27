@@ -1,10 +1,12 @@
 // Simple state store for stadium planner (observer pattern)
+import { SeasonTickets } from "./season-tickets";
 import { Stadium } from "./stadium";
 
 export type State = {
-  currentStadium: Stadium;
-  plannedStadium: Stadium;
-  baseTicketPrice: number;
+  currentStadium: Stadium
+  plannedStadium: Stadium
+  baseTicketPrice: number
+  seasonTickets: SeasonTickets
 };
 
 type Listener = (state: State, prevState: State) => void;
@@ -43,7 +45,8 @@ class Store {
   private isChanged(newState: State, prevState: State): boolean {
     return (newState.currentStadium !== prevState.currentStadium && prevState.currentStadium.isDifferentLayout(newState.currentStadium)) ||
            (newState.plannedStadium !== prevState.plannedStadium && prevState.plannedStadium.isDifferentLayout(newState.plannedStadium)) ||
-           (newState.baseTicketPrice !== prevState.baseTicketPrice);
+           (newState.baseTicketPrice !== prevState.baseTicketPrice) ||
+           (prevState.seasonTickets.isDifferent(newState.seasonTickets));
   }
 
   private notify(newState: State, prevState: State) {
