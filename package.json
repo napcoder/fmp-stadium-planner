@@ -1,6 +1,6 @@
 {
   "name": "fmp-stadium-planner",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A Tampermonkey userscript for Football Manager Project (FMP) browser game to help in planning stadium building.",
   "author": "Marco Travaglini",
   "license": "MIT",

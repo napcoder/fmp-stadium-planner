@@ -15,6 +15,7 @@ export function renderGeneralInfoView(container: HTMLElement, store: Store) {
         const totalSeats = state.currentStadium.getTotalSeats();
         const maxIncome = state.currentStadium.calcMaxIncome(state.baseTicketPrice);
         const maintainanceCost = state.currentStadium.getMaintainCost();
+        const currentRatio = state.currentStadium.getRatio().toString();
 
         container.innerHTML = '';
         const title = makeTitleContainer('FMP Stadium Planner', t('currentInfoTitle'));
@@ -24,11 +25,12 @@ export function renderGeneralInfoView(container: HTMLElement, store: Store) {
         const totalSeatsRow = createRow(t('totalSeats'), totalSeats.toLocaleString());
         const maintainanceCostRow = createRow(t('maintananceCost'), `ⓕ ${maintainanceCost.toLocaleString()}`);
         const maxIncomeRow = createRow(t('maxIncome'), `ⓕ ${maxIncome.toLocaleString()}`);
+        const currentRatioRow = createRow(t('ratioLabel'), currentRatio);
         
         content.appendChild(totalSeatsRow);
         content.appendChild(maintainanceCostRow);
         content.appendChild(maxIncomeRow);
-
+        content.appendChild(currentRatioRow);
         container.appendChild(content);
 
         // Planned stadium info (if available)
@@ -39,6 +41,7 @@ export function renderGeneralInfoView(container: HTMLElement, store: Store) {
             const plannedTotalSeats = state.plannedStadium.getTotalSeats();
             const plannedBuildingCost = upgradeManager.getTotalBuildingCost();
             const plannedTimeToBuild = upgradeManager.getTotalTimeToBuild();
+            const plannedRatio = state.plannedStadium.getRatio().toString();
             
             const plannedTitle = makeTitleContainer(null, t('plannedInfoTitle'));
             container.appendChild(plannedTitle);
@@ -49,10 +52,12 @@ export function renderGeneralInfoView(container: HTMLElement, store: Store) {
             const plannedMaxIncomeRow = createRow(t('maxIncome'), `ⓕ ${plannedMaxIncome.toLocaleString()}`);
             const plannedBuildingCostRow = createRow(t('buildingCost'), `ⓕ ${plannedBuildingCost.toLocaleString()}`);
             const plannedTimeToBuildRow = createRow(t('timeToBuild'), `${plannedTimeToBuild} ${t('days')}`);
+            const plannedRatioRow = createRow(t('ratioLabel'), plannedRatio);
 
             plannedContent.appendChild(plannedTotalSeatsRow);
             plannedContent.appendChild(plannedMaintainanceCostRow);
             plannedContent.appendChild(plannedMaxIncomeRow);
+            plannedContent.appendChild(plannedRatioRow);
             plannedContent.appendChild(plannedBuildingCostRow);
             plannedContent.appendChild(plannedTimeToBuildRow);
 

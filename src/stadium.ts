@@ -1,4 +1,5 @@
 import { SeasonTickets } from "./season-tickets";
+import { SeatsRatio } from "./seats-ratio";
 
 export interface SeatsLayout {
     standing: number;
@@ -107,6 +108,27 @@ export class Stadium {
 
     clone(): Stadium {
         return new Stadium(this.getLayout());
+    }
+
+    getRatio(): SeatsRatio {
+        const totalSeats = this.getTotalSeats();
+        if (totalSeats === 0) {
+            return new SeatsRatio({
+                vip: 0,
+                covered: 0,
+                standard: 0,
+                standing: 0
+            });
+        }
+        // find the lower non zero number in seats and use it to calculate ratio
+        const nonZeroSeats = [this.standing, this.standard, this.covered, this.vip].filter(seat => seat > 0);
+        const minNonZeroSeat = nonZeroSeats.length > 0 ? Math.min(...nonZeroSeats) : 1;
+        return new SeatsRatio({
+            vip: Math.round(this.vip / minNonZeroSeat),
+            covered: Math.round(this.covered / minNonZeroSeat),
+            standard: Math.round(this.standard / minNonZeroSeat),
+            standing: Math.round(this.standing / minNonZeroSeat)
+        });
     }
 }
 

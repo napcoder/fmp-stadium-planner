@@ -64,4 +64,51 @@ describe('Stadium', () => {
       expect(clone.getLayout()).toEqual(original.getLayout());
     });
   });
+
+  describe('Stadium.getRatio', () => {
+    it('should return correct seats ratio when total seats are zero', () => {
+      const stadium = new Stadium({ standing: 0, standard: 0, covered: 0, vip: 0 });
+      const ratio = stadium.getRatio();
+      expect(ratio.standing).toBe(0);
+      expect(ratio.standard).toBe(0);
+      expect(ratio.covered).toBe(0);
+      expect(ratio.vip).toBe(0);
+    });
+    it('should return correct seats ratio for simple seats', () => {
+      const stadium = new Stadium({ standing: 16, standard: 8, covered: 4, vip: 1 });
+      const ratio = stadium.getRatio();
+      expect(ratio.standing).toBe(16);
+      expect(ratio.standard).toBe(8);
+      expect(ratio.covered).toBe(4);
+      expect(ratio.vip).toBe(1);
+    });
+    it('should support zero seats in some categories', () => {
+      const stadium = new Stadium({ standing: 10, standard: 0, covered: 5, vip: 0 });
+      const ratio = stadium.getRatio();
+      expect(ratio.standing).toBe(2);
+      expect(ratio.standard).toBe(0);
+      expect(ratio.covered).toBe(1);
+      expect(ratio.vip).toBe(0);
+    });
+    it.each([
+      { layout: { standing: 4000, standard: 2000, covered: 1000, vip: 0 }, expected: { standing: 4, standard: 2, covered: 1, vip: 0 } },
+      { layout: { standing: 11040, standard: 5520, covered: 2760, vip: 690 }, expected: { standing: 16, standard: 8, covered: 4, vip: 1 } },
+      { layout: { standing: 1000, standard: 1000, covered: 1000, vip: 1000 }, expected: { standing: 1, standard: 1, covered: 1, vip: 1 } },
+    ])('should return correct seats ratio for $layout', ({ layout, expected }) => {
+      const stadium = new Stadium(layout);
+      const ratio = stadium.getRatio();
+      expect(ratio.standing).toBe(expected.standing);
+      expect(ratio.standard).toBe(expected.standard);
+      expect(ratio.covered).toBe(expected.covered);
+      expect(ratio.vip).toBe(expected.vip);
+    });
+    it('should use rounded ratios', () => {
+      const stadium = new Stadium({ standing: 162, standard: 84, covered: 41, vip: 10 });
+      const ratio = stadium.getRatio();
+      expect(ratio.standing).toBe(16);
+      expect(ratio.standard).toBe(8);
+      expect(ratio.covered).toBe(4);
+      expect(ratio.vip).toBe(1);
+    });
+  });
 });

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FMP Stadium Planner
 // @namespace    https://github.com/napcoder/fmp-stadium-planner
-// @version      0.3.0
+// @version      0.4.0
 // @description  Plan, analyze and optimize your Football Manager Project (FMP) stadium!
 // @author       Marco Travaglini (Napcoder)
 // @match        https://footballmanagerproject.com/Economy/Stadium

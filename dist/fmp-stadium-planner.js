@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FMP Stadium Planner
 // @namespace    https://github.com/napcoder/fmp-stadium-planner
-// @version      0.3.0
+// @version      0.4.0
 // @description  Plan, analyze and optimize your Football Manager Project (FMP) stadium!
 // @author       Marco Travaglini (Napcoder)
 // @match        https://footballmanagerproject.com/Economy/Stadium
@@ -16,6 +16,25 @@
 
 (function () {
     'use strict';
+
+    class SeatsRatio {
+        vip;
+        covered;
+        standard;
+        standing;
+        constructor({ vip, covered, standard, standing }) {
+            this.vip = vip;
+            this.covered = covered;
+            this.standard = standard;
+            this.standing = standing;
+        }
+        getTotalWeight() {
+            return this.vip + this.covered + this.standard + this.standing;
+        }
+        toString() {
+            return `${this.vip}-${this.covered}-${this.standard}-${this.standing}`;
+        }
+    }
 
     class Stadium {
         standing;
@@ -91,6 +110,26 @@
         clone() {
             return new Stadium(this.getLayout());
         }
+        getRatio() {
+            const totalSeats = this.getTotalSeats();
+            if (totalSeats === 0) {
+                return new SeatsRatio({
+                    vip: 0,
+                    covered: 0,
+                    standard: 0,
+                    standing: 0
+                });
+            }
+            // find the lower non zero number in seats and use it to calculate ratio
+            const nonZeroSeats = [this.standing, this.standard, this.covered, this.vip].filter(seat => seat > 0);
+            const minNonZeroSeat = nonZeroSeats.length > 0 ? Math.min(...nonZeroSeats) : 1;
+            return new SeatsRatio({
+                vip: Math.round(this.vip / minNonZeroSeat),
+                covered: Math.round(this.covered / minNonZeroSeat),
+                standard: Math.round(this.standard / minNonZeroSeat),
+                standing: Math.round(this.standing / minNonZeroSeat)
+            });
+        }
     }
 
     async function getStadiumData() {
@@ -155,6 +194,7 @@
             maxIncome: "Maximum income",
             maxIncomeWithoutSeasonTickets: "Maximum income (no seas. tkts)",
             maintananceCost: "Maintanance cost",
+            ratioLabel: "Seats ratio",
             plan: "Plan",
             planner: "Planner",
             planned: "Planned",
@@ -179,6 +219,7 @@
             maxIncome: "Massimo incasso",
             maxIncomeWithoutSeasonTickets: "Massimo incasso (meno quota abb.)",
             maintananceCost: "Costo di manutenzione",
+            ratioLabel: "Rapporto posti",
             plan: "Pianifica",
             planner: "Planner",
             planned: "Pianificato",
@@ -332,6 +373,7 @@
             const totalSeats = state.currentStadium.getTotalSeats();
             const maxIncome = state.currentStadium.calcMaxIncome(state.baseTicketPrice);
             const maintainanceCost = state.currentStadium.getMaintainCost();
+            const currentRatio = state.currentStadium.getRatio().toString();
             container.innerHTML = '';
             const title = makeTitleContainer('FMP Stadium Planner', t$2('currentInfoTitle'));
             container.appendChild(title);
@@ -339,9 +381,11 @@
             const totalSeatsRow = createRow$1(t$2('totalSeats'), totalSeats.toLocaleString());
             const maintainanceCostRow = createRow$1(t$2('maintananceCost'), `ⓕ ${maintainanceCost.toLocaleString()}`);
             const maxIncomeRow = createRow$1(t$2('maxIncome'), `ⓕ ${maxIncome.toLocaleString()}`);
+            const currentRatioRow = createRow$1(t$2('ratioLabel'), currentRatio);
             content.appendChild(totalSeatsRow);
             content.appendChild(maintainanceCostRow);
             content.appendChild(maxIncomeRow);
+            content.appendChild(currentRatioRow);
             container.appendChild(content);
             // Planned stadium info (if available)
             if (state.plannedStadium) {
@@ -351,6 +395,7 @@
                 const plannedTotalSeats = state.plannedStadium.getTotalSeats();
                 const plannedBuildingCost = upgradeManager.getTotalBuildingCost();
                 const plannedTimeToBuild = upgradeManager.getTotalTimeToBuild();
+                const plannedRatio = state.plannedStadium.getRatio().toString();
                 const plannedTitle = makeTitleContainer(null, t$2('plannedInfoTitle'));
                 container.appendChild(plannedTitle);
                 const plannedContent = createItemContainer$2();
@@ -359,9 +404,11 @@
                 const plannedMaxIncomeRow = createRow$1(t$2('maxIncome'), `ⓕ ${plannedMaxIncome.toLocaleString()}`);
                 const plannedBuildingCostRow = createRow$1(t$2('buildingCost'), `ⓕ ${plannedBuildingCost.toLocaleString()}`);
                 const plannedTimeToBuildRow = createRow$1(t$2('timeToBuild'), `${plannedTimeToBuild} ${t$2('days')}`);
+                const plannedRatioRow = createRow$1(t$2('ratioLabel'), plannedRatio);
                 plannedContent.appendChild(plannedTotalSeatsRow);
                 plannedContent.appendChild(plannedMaintainanceCostRow);
                 plannedContent.appendChild(plannedMaxIncomeRow);
+                plannedContent.appendChild(plannedRatioRow);
                 plannedContent.appendChild(plannedBuildingCostRow);
                 plannedContent.appendChild(plannedTimeToBuildRow);
                 container.appendChild(plannedContent);
@@ -390,20 +437,61 @@
         return row;
     }
 
+    const defaultRatio = new SeatsRatio({
+        vip: 1,
+        covered: 4,
+        standard: 8,
+        standing: 16,
+    });
+    function planner(desiredTotal, currentStadium, desiredRatio = defaultRatio) {
+        const currentTotal = currentStadium.getTotalSeats();
+        if (currentTotal >= desiredTotal) {
+            return currentStadium; // No changes needed
+        }
+        // Desired proportion: vip:covered:standard:standing = e.g. 1:4:8:16
+        // Total weight = 1+4+8+16 = 29
+        const totalWeight = desiredRatio.getTotalWeight();
+        // Get current layout
+        const layout = currentStadium.getLayout();
+        let remaining = desiredTotal - currentTotal;
+        // Calculate the ideal seat counts for each type
+        const idealLayout = {
+            vip: desiredTotal * desiredRatio.vip / totalWeight,
+            covered: desiredTotal * desiredRatio.covered / totalWeight,
+            standard: desiredTotal * desiredRatio.standard / totalWeight,
+            standing: desiredTotal * desiredRatio.standing / totalWeight
+        };
+        // Calculate how many more seats are needed for each type to reach the ideal
+        const addLayout = {
+            vip: Math.max(0, Math.ceil(idealLayout.vip - layout.vip)),
+            covered: Math.max(0, Math.ceil(idealLayout.covered - layout.covered)),
+            standard: Math.max(0, Math.ceil(idealLayout.standard - layout.standard)),
+            standing: Math.max(0, Math.ceil(idealLayout.standing - layout.standing)),
+        };
+        let totalAdded = addLayout.vip + addLayout.covered + addLayout.standard + addLayout.standing;
+        if (totalAdded > remaining) {
+            return distributeGreedy(layout, idealLayout, remaining, desiredRatio);
+        }
+        else {
+            let extra = remaining - totalAdded;
+            return distributeWithExtra(layout, addLayout, extra, desiredRatio);
+        }
+    }
     /**
      * Distributes remaining seats to approach the ideal 1-4-8-16 proportion, never decreasing any type.
      * Uses a greedy algorithm to increment the type with the largest gap to its ideal until all seats are assigned.
      * @param layout The current seat layout (SeatsLayout)
      * @param idealLayout The ideal seat layout (SeatsLayout)
      * @param remaining Number of seats left to assign
+     * @param desiredRatio The desired seats ratio (SeatsRatio)
      * @returns A new Stadium instance with the updated seat distribution
      */
-    function distributeGreedy(layout, idealLayout, remaining) {
+    function distributeGreedy(layout, idealLayout, remaining, desiredRatio) {
         let needs = [
-            { type: 'vip', current: layout.vip, ideal: idealLayout.vip, weight: 1 },
-            { type: 'covered', current: layout.covered, ideal: idealLayout.covered, weight: 4 },
-            { type: 'standard', current: layout.standard, ideal: idealLayout.standard, weight: 8 },
-            { type: 'standing', current: layout.standing, ideal: idealLayout.standing, weight: 16 },
+            { type: 'vip', current: layout.vip, ideal: idealLayout.vip, weight: desiredRatio.vip },
+            { type: 'covered', current: layout.covered, ideal: idealLayout.covered, weight: desiredRatio.covered },
+            { type: 'standard', current: layout.standard, ideal: idealLayout.standard, weight: desiredRatio.standard },
+            { type: 'standing', current: layout.standing, ideal: idealLayout.standing, weight: desiredRatio.standing },
         ];
         while (remaining > 0) {
             needs.sort((a, b) => (b.ideal - b.current) - (a.ideal - a.current));
@@ -432,18 +520,19 @@
      * @param layout The current seat layout (SeatsLayout)
      * @param addLayout Object with seats to add for each type (SeatsLayout)
      * @param extra Remaining seats to distribute after reaching all ideals
+     * @param desiredRatio The desired seats ratio (SeatsRatio)
      * @returns A new Stadium instance with the updated seat distribution
      */
-    function distributeWithExtra(layout, addLayout, extra) {
+    function distributeWithExtra(layout, addLayout, extra, desiredRatio) {
         let vip = layout.vip + addLayout.vip;
         let covered = layout.covered + addLayout.covered;
         let standard = layout.standard + addLayout.standard;
         let standing = layout.standing + addLayout.standing;
         const weights = [
-            { type: 'vip', weight: 1 },
-            { type: 'covered', weight: 4 },
-            { type: 'standard', weight: 8 },
-            { type: 'standing', weight: 16 },
+            { type: 'vip', weight: desiredRatio.vip },
+            { type: 'covered', weight: desiredRatio.covered },
+            { type: 'standard', weight: desiredRatio.standard },
+            { type: 'standing', weight: desiredRatio.standing },
         ];
         while (extra > 0) {
             for (const w of weights) {
@@ -468,42 +557,8 @@
         }
         return new Stadium({ standing, standard, covered, vip });
     }
-    function planner(desiredTotal, currentStadium) {
-        const currentTotal = currentStadium.getTotalSeats();
-        if (currentTotal >= desiredTotal) {
-            return currentStadium; // No changes needed
-        }
-        // Desired proportion: vip:covered:standard:standing = 1:4:8:16
-        // Total weight = 1+4+8+16 = 29
-        const totalWeight = 29;
-        // Get current layout
-        const layout = currentStadium.getLayout();
-        let remaining = desiredTotal - currentTotal;
-        // Calculate the ideal seat counts for each type
-        const idealLayout = {
-            vip: desiredTotal * 1 / totalWeight,
-            covered: desiredTotal * 4 / totalWeight,
-            standard: desiredTotal * 8 / totalWeight,
-            standing: desiredTotal * 16 / totalWeight
-        };
-        // Calculate how many more seats are needed for each type to reach the ideal
-        const addLayout = {
-            vip: Math.max(0, Math.ceil(idealLayout.vip - layout.vip)),
-            covered: Math.max(0, Math.ceil(idealLayout.covered - layout.covered)),
-            standard: Math.max(0, Math.ceil(idealLayout.standard - layout.standard)),
-            standing: Math.max(0, Math.ceil(idealLayout.standing - layout.standing)),
-        };
-        let totalAdded = addLayout.vip + addLayout.covered + addLayout.standard + addLayout.standing;
-        if (totalAdded > remaining) {
-            return distributeGreedy(layout, idealLayout, remaining);
-        }
-        else {
-            let extra = remaining - totalAdded;
-            return distributeWithExtra(layout, addLayout, extra);
-        }
-    }
 
-    const VERSION = "0.3.0";
+    const VERSION = "0.4.0";
     const MAX_SEATS = 1000000;
 
     const t$1 = getTranslator();

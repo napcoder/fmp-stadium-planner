@@ -1,5 +1,63 @@
+import { SeatsRatio } from "./seats-ratio";
 import { Stadium, SeatsLayout } from "./stadium";
 
+
+const defaultRatio: SeatsRatio = new SeatsRatio({
+    vip: 1,
+    covered: 4,
+    standard: 8,
+    standing: 16,
+});
+
+export function planner(desiredTotal: number, currentStadium: Stadium, desiredRatio: SeatsRatio = defaultRatio): Stadium {
+    const currentTotal = currentStadium.getTotalSeats();
+    if (currentTotal >= desiredTotal) {
+        return currentStadium; // No changes needed
+    }
+
+    // Desired proportion: vip:covered:standard:standing = e.g. 1:4:8:16
+    // Total weight = 1+4+8+16 = 29
+    const totalWeight = desiredRatio.getTotalWeight();
+
+    // Get current layout
+    const layout = currentStadium.getLayout();
+
+    let remaining = desiredTotal - currentTotal;
+
+    // Calculate the ideal seat counts for each type
+    const idealLayout: SeatsLayout = {
+        vip: desiredTotal * desiredRatio.vip / totalWeight,
+        covered: desiredTotal * desiredRatio.covered / totalWeight,
+        standard: desiredTotal * desiredRatio.standard / totalWeight,
+        standing: desiredTotal * desiredRatio.standing / totalWeight
+    };
+
+    // Calculate how many more seats are needed for each type to reach the ideal
+    const addLayout: SeatsLayout = {
+        vip: Math.max(0, Math.ceil(idealLayout.vip - layout.vip)),
+        covered: Math.max(0, Math.ceil(idealLayout.covered - layout.covered)),
+        standard: Math.max(0, Math.ceil(idealLayout.standard - layout.standard)),
+        standing: Math.max(0, Math.ceil(idealLayout.standing - layout.standing)),
+    };
+
+    let totalAdded = addLayout.vip + addLayout.covered + addLayout.standard + addLayout.standing;
+    if (totalAdded > remaining) {
+        return distributeGreedy(
+            layout,
+            idealLayout,
+            remaining,
+            desiredRatio,
+        );
+    } else {
+        let extra = remaining - totalAdded;
+        return distributeWithExtra(
+            layout,
+            addLayout,
+            extra,
+            desiredRatio,
+        );
+    }
+}
 
 /**
  * Distributes remaining seats to approach the ideal 1-4-8-16 proportion, never decreasing any type.
@@ -7,18 +65,20 @@ import { Stadium, SeatsLayout } from "./stadium";
  * @param layout The current seat layout (SeatsLayout)
  * @param idealLayout The ideal seat layout (SeatsLayout)
  * @param remaining Number of seats left to assign
+ * @param desiredRatio The desired seats ratio (SeatsRatio)
  * @returns A new Stadium instance with the updated seat distribution
  */
 function distributeGreedy(
     layout: SeatsLayout,
     idealLayout: SeatsLayout,
-    remaining: number
+    remaining: number,
+    desiredRatio: SeatsRatio
 ): Stadium {
     let needs = [
-        { type: 'vip', current: layout.vip, ideal: idealLayout.vip, weight: 1 },
-        { type: 'covered', current: layout.covered, ideal: idealLayout.covered, weight: 4 },
-        { type: 'standard', current: layout.standard, ideal: idealLayout.standard, weight: 8 },
-        { type: 'standing', current: layout.standing, ideal: idealLayout.standing, weight: 16 },
+        { type: 'vip', current: layout.vip, ideal: idealLayout.vip, weight:  desiredRatio.vip },
+        { type: 'covered', current: layout.covered, ideal: idealLayout.covered, weight:  desiredRatio.covered },
+        { type: 'standard', current: layout.standard, ideal: idealLayout.standard, weight:  desiredRatio.standard },
+        { type: 'standing', current: layout.standing, ideal: idealLayout.standing, weight:  desiredRatio.standing },
     ];
     while (remaining > 0) {
         needs.sort((a, b) => (b.ideal - b.current) - (a.ideal - a.current));
@@ -42,29 +102,30 @@ function distributeGreedy(
     });
 }
 
-
 /**
  * Adds the minimum needed to reach the ideal for each type, then distributes any extra seats in 1-4-8-16 order.
  * Never decreases any seat type below the current value.
  * @param layout The current seat layout (SeatsLayout)
  * @param addLayout Object with seats to add for each type (SeatsLayout)
  * @param extra Remaining seats to distribute after reaching all ideals
+ * @param desiredRatio The desired seats ratio (SeatsRatio)
  * @returns A new Stadium instance with the updated seat distribution
  */
 function distributeWithExtra(
     layout: SeatsLayout,
     addLayout: SeatsLayout,
-    extra: number
+    extra: number,
+    desiredRatio: SeatsRatio
 ): Stadium {
     let vip = layout.vip + addLayout.vip;
     let covered = layout.covered + addLayout.covered;
     let standard = layout.standard + addLayout.standard;
     let standing = layout.standing + addLayout.standing;
     const weights = [
-        { type: 'vip', weight: 1 },
-        { type: 'covered', weight: 4 },
-        { type: 'standard', weight: 8 },
-        { type: 'standing', weight: 16 },
+        { type: 'vip', weight: desiredRatio.vip },
+        { type: 'covered', weight: desiredRatio.covered },
+        { type: 'standard', weight: desiredRatio.standard },
+        { type: 'standing', weight: desiredRatio.standing },
     ];
     while (extra > 0) {
         for (const w of weights) {
@@ -79,52 +140,4 @@ function distributeWithExtra(
         }
     }
     return new Stadium({ standing, standard, covered, vip });
-}
-
-export function planner(desiredTotal: number, currentStadium: Stadium): Stadium {
-    const currentTotal = currentStadium.getTotalSeats();
-    if (currentTotal >= desiredTotal) {
-        return currentStadium; // No changes needed
-    }
-
-    // Desired proportion: vip:covered:standard:standing = 1:4:8:16
-    // Total weight = 1+4+8+16 = 29
-    const totalWeight = 29;
-
-    // Get current layout
-    const layout = currentStadium.getLayout();
-
-    let remaining = desiredTotal - currentTotal;
-
-    // Calculate the ideal seat counts for each type
-    const idealLayout: SeatsLayout = {
-        vip: desiredTotal * 1 / totalWeight,
-        covered: desiredTotal * 4 / totalWeight,
-        standard: desiredTotal * 8 / totalWeight,
-        standing: desiredTotal * 16 / totalWeight
-    };
-
-    // Calculate how many more seats are needed for each type to reach the ideal
-    const addLayout: SeatsLayout = {
-        vip: Math.max(0, Math.ceil(idealLayout.vip - layout.vip)),
-        covered: Math.max(0, Math.ceil(idealLayout.covered - layout.covered)),
-        standard: Math.max(0, Math.ceil(idealLayout.standard - layout.standard)),
-        standing: Math.max(0, Math.ceil(idealLayout.standing - layout.standing)),
-    };
-
-    let totalAdded = addLayout.vip + addLayout.covered + addLayout.standard + addLayout.standing;
-    if (totalAdded > remaining) {
-        return distributeGreedy(
-            layout,
-            idealLayout,
-            remaining
-        );
-    } else {
-        let extra = remaining - totalAdded;
-        return distributeWithExtra(
-            layout,
-            addLayout,
-            extra
-        );
-    }
 }
