@@ -2,12 +2,7 @@ import { SeatsRatio } from "./seats-ratio";
 import { Stadium, SeatsLayout } from "./stadium";
 
 
-const defaultRatio: SeatsRatio = new SeatsRatio({
-    vip: 1,
-    covered: 4,
-    standard: 8,
-    standing: 16,
-});
+const defaultRatio: SeatsRatio = SeatsRatio.getDefaultRatio();
 
 export function planner(desiredTotal: number, currentStadium: Stadium, desiredRatio: SeatsRatio = defaultRatio): Stadium {
     const currentTotal = currentStadium.getTotalSeats();
@@ -15,7 +10,7 @@ export function planner(desiredTotal: number, currentStadium: Stadium, desiredRa
         return currentStadium; // No changes needed
     }
 
-    // Desired proportion: vip:covered:standard:standing = e.g. 1:4:8:16
+    // Desired proportion: vip:covered:standard:standing = e.g. default ratio 1:4:8:16
     // Total weight = 1+4+8+16 = 29
     const totalWeight = desiredRatio.getTotalWeight();
 

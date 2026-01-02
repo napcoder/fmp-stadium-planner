@@ -101,6 +101,10 @@ describe('Stadium', () => {
       expect(ratio.standard).toBe(expected.standard);
       expect(ratio.covered).toBe(expected.covered);
       expect(ratio.vip).toBe(expected.vip);
+      expect(layout.vip === 0 ? 0 : Math.round(layout.vip / layout.vip)).toBe(expected.vip);
+      expect(layout.vip === 0 ? 1 : Math.round(layout.covered / layout.vip)).toBe(expected.covered);
+      expect(layout.vip === 0 ? Math.round(layout.standard / layout.covered) : Math.round(layout.standard / layout.vip)).toBe(expected.standard);
+      expect(layout.vip === 0 ? Math.round(layout.standing / layout.covered) : Math.round(layout.standing / layout.vip)).toBe(expected.standing);
     });
     it('should use rounded ratios', () => {
       const stadium = new Stadium({ standing: 162, standard: 84, covered: 41, vip: 10 });

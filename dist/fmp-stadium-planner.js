@@ -34,6 +34,12 @@
         toString() {
             return `${this.vip}-${this.covered}-${this.standard}-${this.standing}`;
         }
+        static getDefaultRatio() {
+            return new SeatsRatio({ vip: 1, covered: 4, standard: 8, standing: 16 });
+        }
+        static getMaintananceOptimizedRatio() {
+            return new SeatsRatio({ vip: 1, covered: 3, standard: 6, standing: 12 });
+        }
     }
 
     class Stadium {
@@ -371,21 +377,21 @@
         // Subscribe to store
         store.subscribe((state, prevState) => {
             const totalSeats = state.currentStadium.getTotalSeats();
+            const currentRatio = state.currentStadium.getRatio().toString();
             const maxIncome = state.currentStadium.calcMaxIncome(state.baseTicketPrice);
             const maintainanceCost = state.currentStadium.getMaintainCost();
-            const currentRatio = state.currentStadium.getRatio().toString();
             container.innerHTML = '';
             const title = makeTitleContainer('FMP Stadium Planner', t$2('currentInfoTitle'));
             container.appendChild(title);
             const content = createItemContainer$2();
             const totalSeatsRow = createRow$1(t$2('totalSeats'), totalSeats.toLocaleString());
+            const currentRatioRow = createRow$1(t$2('ratioLabel'), currentRatio);
             const maintainanceCostRow = createRow$1(t$2('maintananceCost'), `ⓕ ${maintainanceCost.toLocaleString()}`);
             const maxIncomeRow = createRow$1(t$2('maxIncome'), `ⓕ ${maxIncome.toLocaleString()}`);
-            const currentRatioRow = createRow$1(t$2('ratioLabel'), currentRatio);
             content.appendChild(totalSeatsRow);
+            content.appendChild(currentRatioRow);
             content.appendChild(maintainanceCostRow);
             content.appendChild(maxIncomeRow);
-            content.appendChild(currentRatioRow);
             container.appendChild(content);
             // Planned stadium info (if available)
             if (state.plannedStadium) {
@@ -400,15 +406,15 @@
                 container.appendChild(plannedTitle);
                 const plannedContent = createItemContainer$2();
                 const plannedTotalSeatsRow = createRow$1(t$2('totalSeats'), plannedTotalSeats.toLocaleString());
+                const plannedRatioRow = createRow$1(t$2('ratioLabel'), plannedRatio);
                 const plannedMaintainanceCostRow = createRow$1(t$2('maintananceCost'), `ⓕ ${plannedMaintainanceCost.toLocaleString()}`);
                 const plannedMaxIncomeRow = createRow$1(t$2('maxIncome'), `ⓕ ${plannedMaxIncome.toLocaleString()}`);
                 const plannedBuildingCostRow = createRow$1(t$2('buildingCost'), `ⓕ ${plannedBuildingCost.toLocaleString()}`);
                 const plannedTimeToBuildRow = createRow$1(t$2('timeToBuild'), `${plannedTimeToBuild} ${t$2('days')}`);
-                const plannedRatioRow = createRow$1(t$2('ratioLabel'), plannedRatio);
                 plannedContent.appendChild(plannedTotalSeatsRow);
+                plannedContent.appendChild(plannedRatioRow);
                 plannedContent.appendChild(plannedMaintainanceCostRow);
                 plannedContent.appendChild(plannedMaxIncomeRow);
-                plannedContent.appendChild(plannedRatioRow);
                 plannedContent.appendChild(plannedBuildingCostRow);
                 plannedContent.appendChild(plannedTimeToBuildRow);
                 container.appendChild(plannedContent);
@@ -437,18 +443,13 @@
         return row;
     }
 
-    const defaultRatio = new SeatsRatio({
-        vip: 1,
-        covered: 4,
-        standard: 8,
-        standing: 16,
-    });
+    const defaultRatio = SeatsRatio.getDefaultRatio();
     function planner(desiredTotal, currentStadium, desiredRatio = defaultRatio) {
         const currentTotal = currentStadium.getTotalSeats();
         if (currentTotal >= desiredTotal) {
             return currentStadium; // No changes needed
         }
-        // Desired proportion: vip:covered:standard:standing = e.g. 1:4:8:16
+        // Desired proportion: vip:covered:standard:standing = e.g. default ratio 1:4:8:16
         // Total weight = 1+4+8+16 = 29
         const totalWeight = desiredRatio.getTotalWeight();
         // Get current layout

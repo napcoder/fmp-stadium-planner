@@ -17,4 +17,12 @@ export class SeatsRatio {
     toString(): string {
         return `${this.vip}-${this.covered}-${this.standard}-${this.standing}`;
     }
+
+    static getDefaultRatio(): SeatsRatio {
+        return new SeatsRatio({ vip: 1, covered: 4, standard: 8, standing: 16 });
+    }
+
+    static getMaintananceOptimizedRatio(): SeatsRatio {
+        return new SeatsRatio({ vip: 1, covered: 3, standard: 6, standing: 12 });
+    }
 }
