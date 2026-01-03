@@ -123,13 +123,13 @@ function appendInfoTableSection(table: HTMLTableElement, state: State): void {
     ]);
     tableBody.appendChild(standingSeatsRow);
 
-    const maintainingCostRow = createRow([
-        t('maintananceCost'),
+    const maintenanceCostRow = createRow([
+        t('maintenanceCost'),
         `ⓕ ${state.currentStadium.getMaintainCost().toLocaleString()}`,
         `ⓕ ${state.plannedStadium.getMaintainCost().toLocaleString()}`,
         `ⓕ ${(state.plannedStadium.getMaintainCost() - state.currentStadium.getMaintainCost()).toLocaleString()}`
     ]);  
-    tableBody.appendChild(maintainingCostRow);
+    tableBody.appendChild(maintenanceCostRow);
 
     const maxIncomeRow = createRow([
         t('maxIncome'),

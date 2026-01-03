@@ -1,10 +1,10 @@
 import { getHostLabel as ht, getTranslator } from '../i18n';
 import Store from '../store';
 import { renderGeneralInfoView } from './general-info-view';
-// import { renderInfoView } from './info-view';
 import { renderPlannerView } from './planner-view';
 import { VERSION } from '../settings';
 import { renderDetailedInfoView } from './detailed-info-view';
+import { injectCustomStyles } from './style-handler';
 
 const t = getTranslator();
 
@@ -15,15 +15,7 @@ export function buildView(store: Store) {
         return;
     }
 
-    // Add styles for responsive tables
-    const style = document.createElement('style');
-    style.textContent = `
-        .d-flex, .flexbox, .economy {
-            min-width: 0 !important;
-        }
-    `;
-    document.head.appendChild(style);
-
+    injectCustomStyles();
     const mainHeader = makeMainHeader(VERSION);
     const mainContainer = makeMainContainer();
 
@@ -49,7 +41,6 @@ export function buildView(store: Store) {
 
 
 function findInjectionPoint(): HTMLElement | null {
-    // Find the first element with all three classes: d-flex flex-row flex-wrap
     const candidates = document.querySelectorAll('div.d-flex.flex-row.flex-wrap');
     return candidates.length > 0 ? (candidates[0] as HTMLElement) : null;
 }

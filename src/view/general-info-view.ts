@@ -24,12 +24,12 @@ export function renderGeneralInfoView(container: HTMLElement, store: Store) {
 
         const totalSeatsRow = createRow(t('totalSeats'), totalSeats.toLocaleString());
         const currentRatioRow = createRow(t('ratioLabel'), currentRatio);
-        const maintainanceCostRow = createRow(t('maintananceCost'), `ⓕ ${maintainanceCost.toLocaleString()}`);
+        const maintenanceCostRow = createRow(t('maintenanceCost'), `ⓕ ${maintainanceCost.toLocaleString()}`);
         const maxIncomeRow = createRow(t('maxIncome'), `ⓕ ${maxIncome.toLocaleString()}`);
         
         content.appendChild(totalSeatsRow);
         content.appendChild(currentRatioRow);
-        content.appendChild(maintainanceCostRow);
+        content.appendChild(maintenanceCostRow);
         content.appendChild(maxIncomeRow);
         container.appendChild(content);
 
@@ -37,7 +37,7 @@ export function renderGeneralInfoView(container: HTMLElement, store: Store) {
         if (state.plannedStadium) {
             const upgradeManager = new UpgradeManager(state.currentStadium.getLayout(), state.baseTicketPrice, state.plannedStadium.getLayout());
             const plannedMaxIncome = state.plannedStadium.calcMaxIncome(state.baseTicketPrice);
-            const plannedMaintainanceCost = state.plannedStadium.getMaintainCost();
+            const plannedMaintenanceCost = state.plannedStadium.getMaintainCost();
             const plannedTotalSeats = state.plannedStadium.getTotalSeats();
             const plannedBuildingCost = upgradeManager.getTotalBuildingCost();
             const plannedTimeToBuild = upgradeManager.getTotalTimeToBuild();
@@ -49,14 +49,14 @@ export function renderGeneralInfoView(container: HTMLElement, store: Store) {
 
             const plannedTotalSeatsRow = createRow(t('totalSeats'), plannedTotalSeats.toLocaleString());
             const plannedRatioRow = createRow(t('ratioLabel'), plannedRatio);
-            const plannedMaintainanceCostRow = createRow(t('maintananceCost'), `ⓕ ${plannedMaintainanceCost.toLocaleString()}`);
+            const plannedMaintenanceCostRow = createRow(t('maintenanceCost'), `ⓕ ${plannedMaintenanceCost.toLocaleString()}`);
             const plannedMaxIncomeRow = createRow(t('maxIncome'), `ⓕ ${plannedMaxIncome.toLocaleString()}`);
             const plannedBuildingCostRow = createRow(t('buildingCost'), `ⓕ ${plannedBuildingCost.toLocaleString()}`);
             const plannedTimeToBuildRow = createRow(t('timeToBuild'), `${plannedTimeToBuild} ${t('days')}`);
 
             plannedContent.appendChild(plannedTotalSeatsRow);
             plannedContent.appendChild(plannedRatioRow);
-            plannedContent.appendChild(plannedMaintainanceCostRow);
+            plannedContent.appendChild(plannedMaintenanceCostRow);
             plannedContent.appendChild(plannedMaxIncomeRow);
             plannedContent.appendChild(plannedBuildingCostRow);
             plannedContent.appendChild(plannedTimeToBuildRow);

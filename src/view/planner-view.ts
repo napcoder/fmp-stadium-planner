@@ -1,86 +1,118 @@
 import { getHostLabel as ht, getTranslator } from '../i18n';
-import { SeatsLayout } from '../stadium';
-import { UpgradeManager } from "../upgrade-manager";
 import { planner } from '../planner';
 import { makeTitleContainer } from './title';
 import Store, { State } from '../store';
 import { MAX_SEATS } from '../settings';
+import { SeatsRatio } from '../seats-ratio';
+import { createPlannerAutomaticView } from './planner-automatic-view';
 
 const t = getTranslator();
+
+export enum PlannerMode {
+    PRESET_KHRISTIAN = 'preset-khristian',
+    PRESET_TICKETS = 'preset-tickets',
+    CUSTOM = 'custom',
+    ADVANCED = 'advanced',
+}
+
+interface PlannerViewContext {
+    modeSelected: PlannerMode;
+    currentSeatsRatio: SeatsRatio | null;
+    desiredTotalSeats?: number | null;
+    onModeChange: (mode: PlannerMode, seatsRatio?: SeatsRatio | null) => void;
+    onDesiredTotalSeatsChange: (seats: number | null) => void;
+    onCurrentSeatsRatioChange: (seatsRatio: SeatsRatio) => void;
+    onPlanClick: () => void;
+}
 
 // Renders planner-view and subscribes to store updates
 export function renderPlannerView(container: HTMLElement, store: Store) {
     container.innerHTML = '';
-    store.subscribe((state: State, prevState: State) => {
-        container.innerHTML = '';
-        const title = makeTitleContainer('FMP Stadium Planner', t('planner'));
-        container.appendChild(title);
-        const itemContainer = createItemContainer();
-        container.appendChild(itemContainer);
-        const table = createTable(state.plannedStadium?.getLayout() || state.currentStadium.getLayout());
-        itemContainer.appendChild(table);
-
-        // Bootstrap layout: label above input, button right
-        const controls = document.createElement('div');
-        controls.id = 'planner-controls';
-        controls.className = 'item economy';
-        controls.style.marginTop = '12px';
-
-        // Form group for label above input
-        const formGroup = document.createElement('div');
-        formGroup.className = 'mb-0';
-        formGroup.style.display = 'flex';
-        formGroup.style.flexDirection = 'column';
-        formGroup.style.marginRight = '8px';
-
-        const label = document.createElement('label');
-        label.htmlFor = 'desiredTotalInput';
-        label.textContent = t('desiredTotalSeats');
-        label.className = 'form-label';
-
-        const input = document.createElement('input');
-        input.type = 'number';
-        input.id = 'desiredTotalInput';
-        input.min = state.currentStadium.getTotalSeats().toString();
-        input.max = MAX_SEATS.toString();
-        input.placeholder = state.plannedStadium?.getTotalSeats().toString() || state.currentStadium.getTotalSeats().toString();
-        input.value = state.plannedStadium?.getTotalSeats().toString() || state.currentStadium.getTotalSeats().toString();
-        input.className = 'form-control';
-        input.style.width = '160px';
-
-        formGroup.appendChild(label);
-        formGroup.appendChild(input);
-
-        // Button
-        const btn = document.createElement('button');
-        btn.id = 'planBtn';
-        btn.className = 'fmp-btn btn-green btn ms-2';
-        btn.textContent = t('plan');
-
-        // Flex row: formGroup (label+input) + button
-        const flexRow = document.createElement('div');
-        flexRow.className = 'd-flex align-items-end';
-        flexRow.appendChild(formGroup);
-        flexRow.appendChild(btn);
-
-        controls.appendChild(flexRow);
-        container.appendChild(controls);
-
-        btn.addEventListener('click', () => {
-            let desired = parseInt(input.value, 10);
-            console.log('Plan button clicked with desired seats: ', desired);
-            if (isNaN(desired) || desired < state.currentStadium.getTotalSeats()) {
-                desired = state.currentStadium.getTotalSeats();
-                input.value = desired.toString();
-            } else if (desired > MAX_SEATS) {
-                desired = MAX_SEATS;
-                input.value = MAX_SEATS.toString();
+    let componentContext: PlannerViewContext = {
+        modeSelected: PlannerMode.PRESET_KHRISTIAN,
+        currentSeatsRatio: SeatsRatio.getDefaultRatio(),
+        desiredTotalSeats: store.getState().plannedStadium?.getTotalSeats() || store.getState().currentStadium.getTotalSeats(),
+        onModeChange: (mode: PlannerMode, seatsRatio?: SeatsRatio | null) => {
+            const newContext = { 
+                ...componentContext,
+                modeSelected: mode,
+            };
+            if (seatsRatio !== undefined) {
+                newContext.currentSeatsRatio = seatsRatio;
+            }
+            componentContext = newContext;
+            onStateUpdate(container, store.getState(), store, newContext);
+        },
+        onDesiredTotalSeatsChange: (seats: number | null) => {
+            const newContext = { 
+                ...componentContext,
+                desiredTotalSeats: seats
+            };
+            componentContext = newContext;
+        },
+        onCurrentSeatsRatioChange: (seatsRatio: SeatsRatio) => {
+            const newContext = { 
+                ...componentContext,
+                currentSeatsRatio: seatsRatio
+            };
+            componentContext = newContext;
+        },
+        onPlanClick: () => {
+            let desiredTotal = componentContext.desiredTotalSeats;
+            let shouldUpdateInput = false;
+            const state = store.getState();
+            if (!desiredTotal || isNaN(desiredTotal) || desiredTotal < state.currentStadium.getTotalSeats()) {
+                desiredTotal = state.currentStadium.getTotalSeats();
+                shouldUpdateInput = true;
+            } else if (desiredTotal > MAX_SEATS) {
+                desiredTotal = MAX_SEATS;
+                shouldUpdateInput = true;
             }
             // Use store to update plannedStadium
-            const planned = planner(desired, state.currentStadium);
+            const planned = planner(desiredTotal, state.currentStadium, componentContext.currentSeatsRatio || SeatsRatio.getDefaultRatio());
+            if (shouldUpdateInput) {
+                const newContext = { 
+                    ...componentContext,
+                    desiredTotalSeats: desiredTotal
+                };
+                componentContext = newContext;
+            }
             store.setState({ plannedStadium: planned });
-        });
+        },
+    };
+    store.subscribe((state: State, prevState: State) => {
+        onStateUpdate(container, state, store, componentContext);
     });
+}
+
+function onStateUpdate(container: HTMLElement, state: State, store: Store, componentContext: PlannerViewContext) {
+    container.innerHTML = '';
+    const title = makeTitleContainer('FMP Stadium Planner', t('planner'));
+    container.appendChild(title);
+    const itemContainer = createItemContainer();
+    container.appendChild(itemContainer);
+
+    const controlsContainer = createModeControls(componentContext.modeSelected, componentContext.onModeChange);
+    itemContainer.appendChild(controlsContainer);
+
+    // Mode-specific views
+    if (componentContext.modeSelected === PlannerMode.ADVANCED) {
+        const advancedView = createAdvancedView();
+        itemContainer.appendChild(advancedView);
+    } else {
+        const automaticView = createPlannerAutomaticView({
+            modeSelected: componentContext.modeSelected,
+            currentSeatsRatio: componentContext.currentSeatsRatio,
+            desiredTotalSeats: componentContext.desiredTotalSeats,
+            onDesiredTotalSeatsChange: componentContext.onDesiredTotalSeatsChange,
+            desiredTotalSeatsMin: state.currentStadium.getTotalSeats(),
+            desiredTotalSeatsMax: MAX_SEATS,
+            onCurrentSeatsRatioChange: componentContext.onCurrentSeatsRatioChange,
+            currentSeatsLayout: state.plannedStadium?.getLayout() || state.currentStadium.getLayout(),
+            onPlanClick: componentContext.onPlanClick,
+        });
+        itemContainer.appendChild(automaticView);
+    }
 }
 
 function createItemContainer(): HTMLElement {
@@ -89,47 +121,54 @@ function createItemContainer(): HTMLElement {
     return item;
 }
 
-function makeRow(captionText: string, id: string, value: number) {
-    const tr = document.createElement('tr');
-    tr.className = 'logo-info';
+function createModeControls(selectedMode: PlannerMode, onModeChange: (mode: PlannerMode, seatsRatio?: SeatsRatio | null) => void) : HTMLElement{
+    const mainContainer = document.createElement('div');
+    mainContainer.className = 'mb-3';
+    
+    const modes = [
+        { value: PlannerMode.PRESET_KHRISTIAN, label: t('controlsAutomaticKhristianLabel'), seatsRatio: SeatsRatio.getDefaultRatio() },
+        { value: PlannerMode.PRESET_TICKETS, label: t('controlsAutomaticTicketsLabel'), seatsRatio: SeatsRatio.getMaintananceOptimizedRatio() },
+        { value: PlannerMode.CUSTOM, label: t('controlsAutomaticCustomLabel'), seatsRatio: undefined },
+        { value: PlannerMode.ADVANCED, label: t('controlsAdvancedManualLabel'), seatsRatio: null },
+    ];
 
-    const tdIcon = document.createElement('td');
-    const iconWrap = document.createElement('div');
-    const icon = document.createElement('i');
-    icon.className = 'fmp-icons fmp-stadium';
-    iconWrap.appendChild(icon);
-    tdIcon.appendChild(iconWrap);
+    modes.forEach(mode => {
+        const formCheck = document.createElement('div');
+        formCheck.className = 'form-check';
 
-    const tdVal = document.createElement('td');
-    tdVal.style.verticalAlign = 'middle';
-    const caption = document.createElement('div');
-    caption.className = 'caption';
-    caption.textContent = captionText;
-    const val = document.createElement('div');
-    val.id = id;
-    val.className = 'value';
-    val.textContent = value.toLocaleString();
-    const sub = document.createElement('div');
-    sub.className = 'subtext';
-    tdVal.appendChild(caption);
-    tdVal.appendChild(val);
-    tdVal.appendChild(sub);
+        const input = document.createElement('input');
+        input.className = 'form-check-input fmp-stadium-planner-radio';
+        input.type = 'radio';
+        input.name = 'mode';
+        input.id = `mode-${mode.value}`;
+        input.value = mode.value;
+        if (selectedMode === mode.value) {
+            input.checked = true;
+        }
+        if (mode.value === PlannerMode.ADVANCED) {
+            input.disabled = true; // Advanced mode is disabled for now
+        }
 
-    tr.appendChild(tdIcon);
-    tr.appendChild(tdVal);
+        input.addEventListener('change', () => {
+            onModeChange(mode.value, mode.seatsRatio);
+        });
 
-    return tr;
+        const label = document.createElement('label');
+        label.className = 'form-check-label';
+        label.htmlFor = `mode-${mode.value}`;
+        label.textContent = mode.label;
+
+        formCheck.appendChild(input);
+        formCheck.appendChild(label);
+        mainContainer.appendChild(formCheck);
+    });
+
+    return mainContainer;
 }
 
-function createTable(currentLayout: SeatsLayout): HTMLElement {
-    const table = document.createElement('table');
-    table.id = 'planner-stadium-info';
-    const layout = currentLayout;
-
-    table.appendChild(makeRow(ht('stadium.VIP Seats'), 'planner-stadium-vip', layout.vip));
-    table.appendChild(makeRow(ht('stadium.Covered Seats'), 'planner-stadium-cov', layout.covered));
-    table.appendChild(makeRow(ht('stadium.Other Seats'), 'planner-stadium-sea', layout.standard));
-    table.appendChild(makeRow(ht('stadium.Standing'), 'planner-stadium-sta', layout.standing));
-
-    return table;
+function createAdvancedView(): HTMLElement {
+    const container = document.createElement('div');
+    container.textContent = 'Advanced view content goes here.';
+    return container;
 }
+

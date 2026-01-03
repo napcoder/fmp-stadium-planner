@@ -1,5 +1,3 @@
-import { planner } from "./planner";
-
 const translations = {
     en: {
         totalSeats: "Total seats",
@@ -9,8 +7,10 @@ const translations = {
         constructionDetailsTitle: "Construction details per sector",
         maxIncome: "Maximum income",
         maxIncomeWithoutSeasonTickets: "Maximum income (no seas. tkts)",
-        maintananceCost: "Maintanance cost",
+        maintenanceCost: "Maintenance cost",
         ratioLabel: "Seats ratio",
+        seatsRatioExtendedLabel: "Seats ratio (VIP / Covered / Standard / Standing)",
+        seatsRatioDescription: "Defines how many seats of each type are created for every 1 VIP seat.",
         plan: "Plan",
         planner: "Planner",
         planned: "Planned",
@@ -25,6 +25,11 @@ const translations = {
         timeTableHeader: "Time (days)",
         sectorsTableHeader: "Sector",
         total: "Total",
+        controlsAutomaticKhristianLabel: "Automatic default preset (recommended)",
+        controlsAutomaticTicketsLabel: "Automatic preset based on ticket prices ratios",
+        controlsAutomaticCustomLabel: "Automatic - custom ratio",
+        controlsAdvancedManualLabel: "Advanced - manual sector setup",
+        lastGeneratedLayoutTitle: "Seats layout (last generated)",
     },
     it: {
         totalSeats: "Posti totali",
@@ -34,8 +39,10 @@ const translations = {
         constructionDetailsTitle: "Dettagli costruzione per settore",
         maxIncome: "Massimo incasso",
         maxIncomeWithoutSeasonTickets: "Massimo incasso (meno quota abb.)",
-        maintananceCost: "Costo di manutenzione",
+        maintenanceCost: "Costo di manutenzione",
         ratioLabel: "Rapporto posti",
+        seatsRatioExtendedLabel: "Rapporto posti (VIP / Coperti / Standard / In piedi)",
+        seatsRatioDescription: "Definisce quanti posti di ogni tipo vengono creati per ogni posto VIP.",
         plan: "Pianifica",
         planner: "Planner",
         planned: "Pianificato",
@@ -50,6 +57,11 @@ const translations = {
         timeTableHeader: "Tempo (giorni)",
         sectorsTableHeader: "Settore",
         total: "Totale",
+        controlsAutomaticKhristianLabel: "Automatico default (raccomandato)",
+        controlsAutomaticTicketsLabel: "Automatico basato sui rapporti dei prezzi dei biglietti",
+        controlsAutomaticCustomLabel: "Automatico - rapporto personalizzato",
+        controlsAdvancedManualLabel: "Avanzato - impostazione manuale dei settori",
+        lastGeneratedLayoutTitle: "Layout posti (ultimi generati)",
     }
 };
 
